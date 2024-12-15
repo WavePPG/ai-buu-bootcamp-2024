@@ -12,7 +12,6 @@ from linebot.v3.messaging import (
 from linebot.v3.webhooks import (
     MessageEvent,
     TextMessageContent,
-    ImageMessageContent,
     FollowEvent
 )
 from linebot.v3.exceptions import InvalidSignatureError
