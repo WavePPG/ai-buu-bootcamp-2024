@@ -9,16 +9,20 @@ import faiss
 
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Form
 from linebot.v3 import WebhookHandler
-from linebot.v3.messaging import (Configuration,
-                                  ApiClient,
-                                  MessagingApi,
-                                  ReplyMessageRequest,
-                                  TextMessage,
-                                  ButtonsTemplate,
-                                  TemplateAction)
-from linebot.v3.webhooks import (MessageEvent,
-                                 TextMessageContent,
-                                 ImageMessageContent)
+from linebot.v3.messaging import (
+    Configuration,
+    ApiClient,
+    MessagingApi,
+    ReplyMessageRequest,
+    TextMessage,
+    ButtonsTemplate,
+    MessageAction  # เปลี่ยนจาก TemplateAction เป็น MessageAction
+)
+from linebot.v3.webhooks import (
+    MessageEvent,
+    TextMessageContent,
+    ImageMessageContent
+)
 from linebot.v3.exceptions import InvalidSignatureError
 import google.generativeai as genai
 from sentence_transformers import SentenceTransformer
@@ -35,11 +39,203 @@ CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET", "175149695b4d312eabb9df4b7e3e7
 # ข้อมูล Gemini api key
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AIzaSyD2YLUIU0yDcp7Y7fKaFtlBwvvK9u5RgYI")
 
+
 # การเชื่อมต่อ และตั้งค่าข้อมูลเพื่อเรียกใช้งาน LINE Messaging API
 configuration = Configuration(access_token=ACCESS_TOKEN)
 handler = WebhookHandler(channel_secret=CHANNEL_SECRET)
 
-# ... (ส่วนของคลาส GeminiRAGSystem ยังคงเหมือนเดิม)
+class GeminiRAGSystem:
+    def __init__(self, 
+                 json_db_path: str, 
+                 gemini_api_key: str, 
+                 embedding_model: str = 'all-MiniLM-L6-v2'):
+        # การเชื่อมต่อ และตั้งค่าข้อมูลเพื่อเรียกใช้งาน Gemini
+        genai.configure(api_key=gemini_api_key)
+        
+        # ประกาศโมเดลที่ใช้งาน
+        self.generation_model = genai.GenerativeModel('gemini-1.5-flash')
+        
+        # ข้อมูล JSON ที่ใช้เก็บข้อมูล
+        self.json_db_path = json_db_path
+        
+        # โมเดลที่ใช้ในการสร้างเวกเตอร์ของข้อความ
+        self.embedding_model = SentenceTransformer(embedding_model)
+        
+        # Load ฐานข้อมูลจากไฟล์ JSON
+        self.load_database()
+        
+        # สร้าง FAISS index
+        self.create_faiss_index()
+    
+    def load_database(self):
+        """Load existing database or create new"""
+        try:
+            with open(self.json_db_path, 'r', encoding='utf-8') as f:
+                self.database = json.load(f)
+        except FileNotFoundError:
+            self.database = {
+                'documents': [],
+                'embeddings': [],
+                'metadata': []
+            }
+    
+    def save_database(self):
+        """Save database to JSON file"""
+        with open(self.json_db_path, 'w', encoding='utf-8') as f:
+            json.dump(self.database, f, indent=2, ensure_ascii=False)
+     
+    def add_document(self, text: str, metadata: dict = None):
+        """Add document to database with embedding"""
+        # ประมวลผลข้อความเพื่อหาเวกเตอร์ของข้อความ
+        embedding = self.embedding_model.encode([text])[0]
+        
+        # เพิ่มข้อมูลลงในฐานข้อมูล
+        self.database['documents'].append(text)
+        self.database['embeddings'].append(embedding.tolist())
+        self.database['metadata'].append(metadata or {})
+        
+        # Save ฐานข้อมูลลงในไฟล์ JSON
+        self.save_database()
+        self.create_faiss_index()
+    
+    def create_faiss_index(self):
+        """Create FAISS index for similarity search"""
+        if not self.database['embeddings']:
+            return
+        
+        # แปลงข้อมูลเป็น numpy array
+        embeddings = np.array(self.database['embeddings'], dtype='float32')
+        dimension = embeddings.shape[1]
+
+        # สร้าง FAISS index
+        self.index = faiss.IndexFlatL2(dimension)
+        
+        # เพิ่มข้อมูลลงใน FAISS index
+        self.index.add(embeddings)
+    
+    def retrieve_documents(self, query: str, top_k: int = 3):
+        """Retrieve most relevant documents"""
+        if not self.database['embeddings']:
+            return []
+        
+        # แปลงข้อความเป็นเวกเตอร์
+        query_embedding = self.embedding_model.encode([query])
+        
+        # ค้นหาเอกสารที่เกี่ยวข้องด้วย similarity search
+        D, I = self.index.search(query_embedding, top_k)
+        
+        return [self.database['documents'][i] for i in I[0]]
+    
+    def generate_response(self, query: str):
+        """Generate response using Gemini and retrieved documents"""
+        # Retrieve ข้อมูลจากฐานข้อมูล
+        retrieved_docs = self.retrieve_documents(query)
+        
+        # เตรียมข้อมูลเพื่อใช้ในการสร้างคำถาม
+        context = "\n\n".join(retrieved_docs)
+        
+        # สร้าง Prompt เพื่อใช้ในการสร้างคำตอบ
+        full_prompt = f"""You are an AI assistant. 
+Use the following context to answer the question precisely:
+
+Context:
+{context}
+
+Question: {query}
+
+Provide a detailed and informative response based on the context in Thai 
+but if the response is not about the context just ignore and answering in way nat."""
+        
+        # คำตอบจาก Gemini
+        try:
+            response = self.generation_model.generate_content(full_prompt)
+            return response.text, full_prompt
+        except Exception as e:
+            return f"Error generating response: {str(e)}", str(e)
+    
+    def process_image_query(self, 
+                            image_content: bytes, 
+                            query: str,
+                            use_rag: bool = True,
+                            top_k_docs: int = 3) -> Dict:
+        """
+        Process image-based query with optional RAG enhancement
+        
+        Args:
+            image_content (bytes): Content of the image
+            query (str): Query about the image
+            use_rag (bool): Whether to use RAG for context
+            top_k_docs (int): Number of documents to retrieve
+        
+        Returns:
+            Generated response about the image
+        """
+        # เปิดภาพจากข้อมูลที่ส่งมา
+        image = Image.open(BytesIO(image_content))
+
+        # สร้างคำอธิบายของภาพ
+        initial_description = self.generation_model.generate_content(
+            ["Provide a detailed, objective description of this image", image],
+            generation_config={
+                "max_output_tokens": 256,
+                "temperature": 0.4,
+                "top_p": 0.9,
+                "top_k": 8
+            }
+        ).text
+        
+        # สำหรับการใช้งาน RAG 
+        context = ""
+        if use_rag:
+            # นำคำอธิบายภาพไปใช้ในการค้นหาเอกสารที่เกี่ยวข้องใน JSON
+            retrieved_docs = self.retrieve_documents(initial_description, top_k_docs)
+            
+            # นำข้อมูลที่ได้จากการค้นหามาใช้ในการสร้างบริบท
+            context = "\n\n".join(retrieved_docs)
+        
+        # สร้าง Prompt สำหรับการสร้างคำตอบ
+        enhanced_prompt = f"""Image Description:
+{initial_description}
+
+Context from Knowledge Base:
+{context}
+
+User Query: {query}
+
+Based on the image description and the contextual information from our knowledge base, 
+provide a comprehensive and insightful response to the query. 
+If the context does not directly relate to the image, focus on the image description 
+and your visual analysis in Thai."""
+        
+        # สร้างคำตอบจาก Gemini
+        try:
+            response = self.generation_model.generate_content(
+                [enhanced_prompt, image],
+                generation_config={
+                    "max_output_tokens": 256,
+                    "temperature": 0.4,
+                    "top_p": 0.9,
+                    "top_k": 8
+                }
+            )
+            
+            return {
+                "final_response": response.text,
+            }
+        except Exception as e:
+            return {
+                "error": f"Error generating response: {str(e)}",
+                "image_description": initial_description
+            }
+    
+    def clear_database(self):
+        """Clear database and save to JSON file"""
+        self.database = {
+            'documents': [],
+            'embeddings': [],
+            'metadata': []
+        }
+        self.save_database()
 
 # สร้าง Object สำหรับใช้งาน Gemini
 gemini = GeminiRAGSystem(
@@ -113,8 +309,8 @@ def handle_message(event: MessageEvent):
             buttons_template = ButtonsTemplate(
                 text="เลือกตัวเลือกที่ต้องการ:",
                 actions=[
-                    TemplateAction(label="ช้าง 🐘", text="ช้าง"),
-                    TemplateAction(label="แผนที่ 🗺️", text="แผนที่")
+                    MessageAction(label="ช้าง 🐘", text="ช้าง"),
+                    MessageAction(label="แผนที่ 🗺️", text="แผนที่")
                 ]
             )
 
@@ -170,8 +366,8 @@ def handle_message(event: MessageEvent):
             buttons_template = ButtonsTemplate(
                 text="ต้องการทำอะไรต่อไป?",
                 actions=[
-                    TemplateAction(label="ช้าง 🐘", text="ช้าง"),
-                    TemplateAction(label="แผนที่ 🗺️", text="แผนที่")
+                    MessageAction(label="ช้าง 🐘", text="ช้าง"),
+                    MessageAction(label="แผนที่ 🗺️", text="แผนที่")
                 ]
             )
 
