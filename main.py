@@ -13,7 +13,8 @@ from linebot.v3.webhooks import (
     MessageEvent,
     TextMessageContent,
     ImageMessageContent,
-    MemberJoinedEvent
+    MemberJoinedEvent,
+    FollowEvent  # เพิ่มการนำเข้า FollowEvent
 )
 from linebot.v3.exceptions import InvalidSignatureError
 
@@ -71,6 +72,21 @@ def handle_member_joined(event: MemberJoinedEvent):
             ReplyMessageRequest(
                 replyToken=event.reply_token,
                 messages=[welcome_message]
+            )
+        )
+
+# Handler สำหรับการเพิ่มเพื่อน OA
+@handler.add(FollowEvent)
+def handle_follow(event: FollowEvent):
+    with ApiClient(configuration) as api_client:
+        line_bot_api = MessagingApi(api_client)
+        # ข้อความที่ต้องการส่งเมื่อมีผู้ใช้เพิ่ม OA เป็นเพื่อน
+        follow_message = TextMessage(text="ขอบคุณที่เพิ่มเรามาเป็นเพื่อน! คุณสามารถเข้าถึงข้อมูลเพิ่มเติมได้ที่: https://aprlabtop.com/Honey_test/map_1.php")
+        # ส่งข้อความตอบกลับไปยังผู้ใช้
+        line_bot_api.reply_message_with_http_info(
+            ReplyMessageRequest(
+                replyToken=event.reply_token,
+                messages=[follow_message]
             )
         )
 
