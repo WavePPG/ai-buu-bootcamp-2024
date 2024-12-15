@@ -13,8 +13,7 @@ from linebot.v3.webhooks import (
     MessageEvent,
     TextMessageContent,
     ImageMessageContent,
-    MemberJoinedEvent,
-    FollowEvent  # เพิ่มการนำเข้า FollowEvent
+    FollowEvent
 )
 from linebot.v3.exceptions import InvalidSignatureError
 
@@ -46,32 +45,26 @@ async def message(request: Request):
     except InvalidSignatureError:
         raise HTTPException(status_code=400, detail="Invalid signature")
 
-# Handler สำหรับข้อความทั่วไป (สามารถลบได้ถ้าไม่ต้องการใช้งาน)
-@handler.add(MessageEvent, message=(TextMessageContent, ImageMessageContent))
+# Handler สำหรับข้อความทั่วไป
+@handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event: MessageEvent):
-    # ตัวอย่างการตอบกลับข้อความทั่วไป (สามารถปรับแต่งหรือลบได้)
-    with ApiClient(configuration) as api_client:
-        line_bot_api = MessagingApi(api_client)
-        reply_text = "ขอบคุณสำหรับข้อความของคุณ!"
-        line_bot_api.reply_message_with_http_info(
-            ReplyMessageRequest(
-                replyToken=event.reply_token,
-                messages=[TextMessage(text=reply_text)]
-            )
-        )
+    # ตรวจสอบข้อความที่ส่งมา
+    user_message = event.message.text.lower()
+    # กำหนดคำที่บอทจะตอบกลับเมื่อพบคำขอลิงก์
+    keywords = ["ขอลิ้ง", "ส่งลิงก์", "ขอแหล่งข้อมูล", "ขอลิงค์"]
 
-# Handler สำหรับการเข้าร่วมสมาชิกใหม่ในกลุ่ม
-@handler.add(MemberJoinedEvent)
-def handle_member_joined(event: MemberJoinedEvent):
+    if any(keyword in user_message for keyword in keywords):
+        response_text = "นี่คือลิงก์ที่คุณขอ: https://aprlabtop.com/Honey_test/map_1.php"
+    else:
+        # ถ้าไม่ใช่คำที่ต้องการ บอทสามารถตอบกลับข้อความทั่วไป หรือไม่ตอบก็ได้
+        response_text = "ถ้าคุณต้องการลิงก์ กรุณาพิมพ์คำว่า 'ขอลิ้ง' หรือ 'ส่งลิงก์'"
+
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
-        # ข้อความที่ต้องการส่งเมื่อมีสมาชิกใหม่เข้าร่วมกลุ่ม
-        welcome_message = TextMessage(text="https://aprlabtop.com/Honey_test/map_1.php")
-        # ส่งข้อความตอบกลับไปยังกลุ่ม
         line_bot_api.reply_message_with_http_info(
             ReplyMessageRequest(
                 replyToken=event.reply_token,
-                messages=[welcome_message]
+                messages=[TextMessage(text=response_text)]
             )
         )
 
