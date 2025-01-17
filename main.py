@@ -9,14 +9,20 @@ import faiss
 
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Form
 from linebot.v3 import WebhookHandler
-from linebot.v3.messaging import (Configuration,
-                                  ApiClient,
-                                  MessagingApi,
-                                  ReplyMessageRequest,
-                                  TextMessage)
-from linebot.v3.webhooks import (MessageEvent,
-                                 TextMessageContent,
-                                 ImageMessageContent)
+from linebot.v3.messaging import (
+    Configuration,
+    ApiClient,
+    MessagingApi,
+    ReplyMessageRequest,
+    TextMessage,
+    FlexMessage,
+)
+from linebot.v3.webhooks import (
+    MessageEvent,
+    TextMessageContent,
+    ImageMessageContent,
+    PostbackEvent,
+)
 from linebot.v3.exceptions import InvalidSignatureError
 from sentence_transformers import SentenceTransformer
 from typing import Dict
@@ -124,16 +130,8 @@ async def lifespan(app: FastAPI):
     # ข้อมูลตัวอย่างที่ใช้สำหรับ RAG
     sample_documents = [
         # ข้อความโปรโมชั่นเดิม
-        "**🔍 ตรวจช้างก่อนเดินทาง!** เช็คความปลอดภัยก่อนออกเดินทางที่นี่ 👉 [คลิกเลย](https://aprlabtop.com/Honey_test/chang_v1.php)",
-        "**🛡️ ป้องกันช้างบนถนน** ดูข้อมูลช้างป่าล่วงหน้าเพื่อความปลอดภัยของคุณ 👉 [ดูเพิ่มเติม](https://aprlabtop.com/Honey_test/chang_v1.php)",
-        "**🚗 ขับขี่ปลอดภัยจากช้างป่า** ตรวจสอบพื้นที่มีช้างหรือไม่ก่อนออกเดินทาง 👉 [ตรวจสอบเลย](https://aprlabtop.com/Honey_test/chang_v1.php)",
-        "**🌿 ช้างป่าไม่ใช่ปัญหา** ใช้ AI ของเราเช็คช้างก่อนเดินทาง 👉 [เริ่มเลย](https://aprlabtop.com/Honey_test/chang_v1.php)",
-        "**👀 มองเห็นช้างก่อนถนน** เพิ่มความปลอดภัยด้วยการตรวจช้างล่วงหน้า 👉 [เข้าดู](https://aprlabtop.com/Honey_test/chang_v1.php)",
-        "**📍 แผนที่ช้างป่า** หาตำแหน่งช้างก่อนเดินทางของคุณ 👉 [สำรวจแผนที่](https://aprlabtop.com/Honey_test/chang_v1.php)",
-        "**🔔 เตือนช้างบนถนน** รับการแจ้งเตือนเมื่อมีช้างในพื้นที่ 👉 [สมัครรับข้อมูล](https://aprlabtop.com/Honey_test/chang_v1.php)",
-        "**✨ ความปลอดภัยเป็นเรื่องสำคัญ** เช็คช้างป่าก่อนออกเดินทางทุกครั้ง 👉 [คลิกที่นี่](https://aprlabtop.com/Honey_test/chang_v1.php)",
-        "**🦁 ปกป้องชีวิตจากช้างป่า** ใช้เทคโนโลยี AI เพื่อความปลอดภัยของคุณ 👉 [เรียนรู้เพิ่มเติม](https://aprlabtop.com/Honey_test/chang_v1.php)",
-        "**🌐 เชื่อมต่อกับความปลอดภัย** ตรวจสอบช้างป่าผ่านระบบ AI ของเรา 👉 [เข้าร่วมตอนนี้](https://aprlabtop.com/Honey_test/chang_v1.php)",
+        "**🔍 ตรวจช้างก่อนเดินทาง!** เช็คความปลอดภัยก่อนออกเดินทางที่นี่ 👉 [คลิกเลย](https://aprlabtop.com/Honey_test/chang_v3.php)",
+        "คู่มือการใช้งาน "
 
         # ชุดคำถามและคำตอบสำหรับกรณีฉุกเฉิน
         "**❓ เกิดเหตุฉุกเฉิน ต้องเรียกเจ้าหน้าที่หมายเลขอะไร?**\n**✅ คำตอบ:** หากเกิดเหตุฉุกเฉินทั่วไป เช่น อุบัติเหตุทางถนน หรือเหตุการณ์ที่ต้องการความช่วยเหลือทันที กรุณาเรียกหมายเลข **1669** ซึ่งเป็นหมายเลขบริการฉุกเฉินของประเทศไทย",
@@ -168,6 +166,137 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+# Function สำหรับสร้างคู่มือการใช้งานในรูปแบบ Flex Message
+def create_guide_flex_message() -> FlexMessage:
+    flex_message = {
+        "type": "bubble",
+        "hero": {
+            "type": "image",
+            "url": "https://your-image-url.com/guide.png",  # เปลี่ยน URL เป็นรูปภาพที่ต้องการ
+            "size": "full",
+            "aspectRatio": "20:13",
+            "aspectMode": "cover"
+        },
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": "คู่มือการใช้งาน Line",
+                    "weight": "bold",
+                    "size": "xl",
+                    "margin": "none"
+                },
+                {
+                    "type": "separator",
+                    "margin": "md"
+                },
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "margin": "lg",
+                    "spacing": "sm",
+                    "contents": [
+                        {
+                            "type": "box",
+                            "layout": "baseline",
+                            "spacing": "sm",
+                            "contents": [
+                                {
+                                    "type": "text",
+                                    "text": "ฟีเจอร์ Emergency",
+                                    "weight": "bold",
+                                    "flex": 0
+                                }
+                            ]
+                        },
+                        {
+                            "type": "text",
+                            "text": "เมื่อกดปุ่ม Emergency บอทจะให้คำแนะนำในสถานการณ์ฉุกเฉินต่างๆ และคุณสามารถถามตอบกับบอทได้ เช่น \"ช้างเหยียบรถควรทำยังไง\"",
+                            "wrap": True,
+                            "size": "sm",
+                            "color": "#555555"
+                        },
+                        {
+                            "type": "box",
+                            "layout": "baseline",
+                            "spacing": "sm",
+                            "margin": "lg",
+                            "contents": [
+                                {
+                                    "type": "text",
+                                    "text": "ฟีเจอร์ ระวังช้าง",
+                                    "weight": "bold",
+                                    "flex": 0
+                                }
+                            ]
+                        },
+                        {
+                            "type": "text",
+                            "text": "เมื่อกดปุ่ม ระวังช้าง บอทจะส่งลิงก์ที่สามารถตรวจสอบเส้นทางของคุณให้ปลอดภัยจากช้าง",
+                            "wrap": True,
+                            "size": "sm",
+                            "color": "#555555"
+                        }
+                    ]
+                }
+            ]
+        },
+        "footer": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "sm",
+            "contents": [
+                {
+                    "type": "button",
+                    "style": "link",
+                    "height": "sm",
+                    "action": {
+                        "type": "uri",
+                        "label": "ติดต่อฝ่ายสนับสนุน",
+                        "uri": "https://www.line-support.com"  # เปลี่ยนเป็น URL ที่ต้องการ
+                    }
+                },
+                {
+                    "type": "spacer",
+                    "size": "sm"
+                }
+            ],
+            "flex": 0
+        }
+    }
+    return FlexMessage(alt_text="คู่มือการใช้งาน Line", contents=flex_message)
+
+# Function สำหรับสร้างเมนูหลักด้วยปุ่ม "คู่มือการใช้งาน" (ถ้าต้องการเพิ่ม)
+def create_main_menu_flex_message() -> FlexMessage:
+    flex_message = {
+        "type": "bubble",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "md",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": "ยินดีต้อนรับสู่บริการของเรา!",
+                    "weight": "bold",
+                    "size": "lg"
+                },
+                {
+                    "type": "button",
+                    "action": {
+                        "type": "postback",
+                        "label": "คู่มือการใช้งาน",
+                        "data": "action=guide"
+                    },
+                    "style": "primary"
+                }
+            ]
+        }
+    }
+    return FlexMessage(alt_text="เมนูหลัก", contents=flex_message)
+
 # Endpoint สำหรับการสร้าง Webhook
 @app.post('/message')
 async def message(request: Request):
@@ -194,7 +323,19 @@ def handle_message(event: MessageEvent):
 
         # ตรวจสอบ Message ว่าเป็นประเภทข้อความ Text
         if isinstance(event.message, TextMessageContent):
-            user_message = event.message.text
+            user_message = event.message.text.strip().lower()
+
+            if user_message in ["คู่มือ", "manual"]:
+                # ส่งคู่มือการใช้งานในรูปแบบ Flex Message
+                flex_message = create_guide_flex_message()
+                line_bot_api.reply_message_with_http_info(
+                    ReplyMessageRequest(
+                        replyToken=event.reply_token,
+                        messages=[flex_message]
+                    )
+                )
+                return
+
             # การค้นหาข้อมูลจาก RAG
             retrieved_docs = rag.retrieve_documents(user_message, top_k=1)
             if retrieved_docs:
@@ -202,7 +343,7 @@ def handle_message(event: MessageEvent):
                 reply = retrieved_docs[0]
             else:
                 reply = "ขออภัย ฉันไม่เข้าใจคำถามของคุณ กรุณาลองใหม่อีกครั้ง"
-            
+
             # Reply ข้อมูลกลับไปยัง LINE
             line_bot_api.reply_message_with_http_info(
                 ReplyMessageRequest(
@@ -229,7 +370,7 @@ def handle_message(event: MessageEvent):
                     )
                 )
                 return
-            
+
             if image.size[0] * image.size[1] > 1024 * 1024:
                 line_bot_api.reply_message_with_http_info(
                     ReplyMessageRequest(
@@ -248,6 +389,25 @@ def handle_message(event: MessageEvent):
                     messages=[TextMessage(text="ขณะนี้ระบบไม่สามารถประมวลผลรูปภาพได้ กรุณาสอบถามด้วยข้อความแทนค่ะ 🙏🏻")]
                 )
             )
+
+# Endpoint สำหรับจัดการ Postback Events (ถ้ามีการใช้ปุ่มเมนูหลัก)
+@handler.add(PostbackEvent)
+def handle_postback(event: PostbackEvent):
+    with ApiClient(configuration) as api_client:
+        line_bot_api = MessagingApi(api_client)
+        data = event.postback.data
+
+        if data == "action=guide":
+            flex_message = create_guide_flex_message()
+            line_bot_api.reply_message_with_http_info(
+                ReplyMessageRequest(
+                    replyToken=event.reply_token,
+                    messages=[flex_message]
+                )
+            )
+            return
+
+        # สามารถเพิ่มเงื่อนไขอื่นๆ สำหรับ postback data ได้ที่นี่
 
 # Endpoint สำหรับทดสอบ RAG ด้วยข้อความ
 @app.get('/test-message')
