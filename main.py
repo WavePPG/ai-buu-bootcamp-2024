@@ -2,7 +2,6 @@ import requests
 from io import BytesIO
 from PIL import Image
 import uvicorn
-import json
 import numpy as np
 import os
 import faiss
@@ -33,38 +32,22 @@ configuration = Configuration(access_token=ACCESS_TOKEN)
 handler = WebhookHandler(channel_secret=CHANNEL_SECRET)
 
 class RAGSystem:
-    def __init__(self, json_db_path: str, embedding_model: str = 'all-MiniLM-L6-v2'):
+    def __init__(self, embedding_model: str = 'all-MiniLM-L6-v2'):
         # โมเดลที่ใช้ในการสร้างเวกเตอร์ของข้อความ
         self.embedding_model = SentenceTransformer(embedding_model)
 
-        # ข้อมูล JSON ที่ใช้เก็บข้อมูล
-        self.json_db_path = json_db_path
-
-        # Load ฐานข้อมูลจากไฟล์ JSON
-        self.load_database()
+        # Initialize in-memory database
+        self.database = {
+            'documents': [],
+            'embeddings': [],
+            'metadata': []
+        }
 
         # สร้าง FAISS index
         self.create_faiss_index()
 
-    def load_database(self):
-        """Load existing database or create new"""
-        try:
-            with open(self.json_db_path, 'r', encoding='utf-8') as f:
-                self.database = json.load(f)
-        except FileNotFoundError:
-            self.database = {
-                'documents': [],
-                'embeddings': [],
-                'metadata': []
-            }
-
-    def save_database(self):
-        """Save database to JSON file"""
-        with open(self.json_db_path, 'w', encoding='utf-8') as f:
-            json.dump(self.database, f, indent=2, ensure_ascii=False)
-
     def add_document(self, text: str, metadata: dict = None):
-        """Add document to database with embedding"""
+        """Add document to in-memory database with embedding"""
         # ประมวลผลข้อความเพื่อหาเวกเตอร์ของข้อความ
         embedding = self.embedding_model.encode([text])[0]
 
@@ -73,13 +56,13 @@ class RAGSystem:
         self.database['embeddings'].append(embedding.tolist())
         self.database['metadata'].append(metadata or {})
 
-        # Save ฐานข้อมูลลงในไฟล์ JSON
-        self.save_database()
+        # สร้าง FAISS index ใหม่หลังจากเพิ่มเอกสาร
         self.create_faiss_index()
 
     def create_faiss_index(self):
         """Create FAISS index for similarity search"""
         if not self.database['embeddings']:
+            self.index = None
             return
 
         # แปลงข้อมูลเป็น numpy array
@@ -94,30 +77,28 @@ class RAGSystem:
 
     def retrieve_documents(self, query: str, top_k: int = 1):
         """Retrieve most relevant documents"""
-        if not self.database['embeddings']:
+        if not self.database['embeddings'] or self.index is None:
             return []
 
         # แปลงข้อความเป็นเวกเตอร์
-        query_embedding = self.embedding_model.encode([query])
+        query_embedding = self.embedding_model.encode([query]).astype('float32')
 
         # ค้นหาเอกสารที่เกี่ยวข้องด้วย similarity search
         D, I = self.index.search(query_embedding, top_k)
 
-        return [self.database['documents'][i] for i in I[0]]
+        return [self.database['documents'][i] for i in I[0] if i < len(self.database['documents'])]
 
     def clear_database(self):
-        """Clear database and save to JSON file"""
+        """Clear in-memory database"""
         self.database = {
             'documents': [],
             'embeddings': [],
             'metadata': []
         }
-        self.save_database()
+        self.index = None
 
 # สร้าง Object สำหรับใช้งาน RAG
-rag = RAGSystem(
-    json_db_path="rag_database.json"
-)
+rag = RAGSystem()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
