@@ -162,7 +162,7 @@ def get_manual_response(user_message: str) -> str:
     user_message = user_message.strip().lower()
     if user_message in ["emergency", "คู่มือการใช้งาน"]:
         return EMERGENCY_MANUAL
-    elif user_message in ["เกิดเหตุฉุกเฉินทำยังไง", "เกิดเหตุฉุกเฉิน"]:
+    elif user_message in ["EmerGency เกิดเหตุฉุกเฉินทำยังไง", "มีเหตุร้ายใกล้ตัว"]:
         return WATCH_ELEPHANT_MANUAL
     elif user_message == "ตรวจสอบช้างก่อนเดินทาง":
         return CHECK_ELEPHANT_MANUAL
