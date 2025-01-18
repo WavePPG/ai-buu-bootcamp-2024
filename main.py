@@ -104,9 +104,6 @@ rag = RAGSystem()
 async def lifespan(app: FastAPI):
     # ข้อมูลตัวอย่างที่ใช้สำหรับ RAG
     sample_documents = [
-        # เอกสารอื่นๆ ที่ไม่ใช่คำตอบเฉพาะเจาะจง
-        """**ติดต่อเจ้าหน้าที่**
-**✅ คำตอบ:** หากเกิดเหตุฉุกเฉินทั่วไป เช่น อุบัติเหตุทางถนน หรือเหตุการณ์ที่ต้องการความช่วยเหลือทันที กรุณาเรียกหมายเลข **1669** ซึ่งเป็นหมายเลขบริการฉุกเฉินของประเทศไทย""",
     ]
     # เพิ่มข้อมูลตัวอย่างลงใน RAG
     for doc in sample_documents:
@@ -165,7 +162,7 @@ def get_manual_response(user_message: str) -> str:
     user_message = user_message.strip().lower()
     if user_message in ["emergency", "คู่มือการใช้งาน"]:
         return EMERGENCY_MANUAL
-    elif user_message in ["เกิดเหตุฉุกเฉิน ช้างเข้าใกล้รถควรทำยังไง", "เกิดเหตุฉุกเฉิน"]:
+    elif user_message in ["เกิดเหตุฉุกเฉินทำยังไง", "เกิดเหตุฉุกเฉิน"]:
         return WATCH_ELEPHANT_MANUAL
     elif user_message == "ตรวจสอบช้างก่อนเดินทาง":
         return CHECK_ELEPHANT_MANUAL
