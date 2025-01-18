@@ -19,6 +19,7 @@ import uvicorn
 import json
 import numpy as np
 import faiss
+import os
 
 app = FastAPI()
 
