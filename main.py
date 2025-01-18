@@ -9,22 +9,20 @@ import faiss
 
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Form
 from linebot.v3 import WebhookHandler
-from linebot.v3.messaging import (
-    Configuration,
-    ApiClient,
-    MessagingApi,
-    ReplyMessageRequest,
-    TextMessage
-)
-from linebot.v3.webhooks import (
-    MessageEvent,
-    TextMessageContent,
-    ImageMessageContent
-)
+from linebot.v3.messaging import (Configuration,
+                                  ApiClient,
+                                  MessagingApi,
+                                  ReplyMessageRequest,
+                                  TextMessage)
+from linebot.v3.webhooks import (MessageEvent,
+                                 TextMessageContent,
+                                 ImageMessageContent)
 from linebot.v3.exceptions import InvalidSignatureError
 from sentence_transformers import SentenceTransformer
 from typing import Dict
 from contextlib import asynccontextmanager
+
+app = FastAPI()
 
 # ข้อมูล token และ channel secret สำหรับ LINE
 ACCESS_TOKEN = os.getenv("LINE_ACCESS_TOKEN", "RMuXBCLD7tGSbkGgdELH7Vz9+Qz0YhqCIeKBhpMdKvOVii7W2L9rNpAHjYGigFN4ORLknMxhuWJYKIX3uLrY1BUg7E3Bk0v3Fmc5ZIC53d8fOdvIMyZQ6EdaOS0a6kejeqcX/dRFI/JfiFJr5mdwZgdB04t89/1O/w1cDnyilFU=")
@@ -34,22 +32,20 @@ CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET", "175149695b4d312eabb9df4b7e3e7
 configuration = Configuration(access_token=ACCESS_TOKEN)
 handler = WebhookHandler(channel_secret=CHANNEL_SECRET)
 
-app = FastAPI()
-
 class RAGSystem:
     def __init__(self, json_db_path: str, embedding_model: str = 'all-MiniLM-L6-v2'):
         # โมเดลที่ใช้ในการสร้างเวกเตอร์ของข้อความ
         self.embedding_model = SentenceTransformer(embedding_model)
-        
+
         # ข้อมูล JSON ที่ใช้เก็บข้อมูล
         self.json_db_path = json_db_path
-        
+
         # Load ฐานข้อมูลจากไฟล์ JSON
         self.load_database()
-        
+
         # สร้าง FAISS index
         self.create_faiss_index()
-    
+
     def load_database(self):
         """Load existing database or create new"""
         try:
@@ -61,54 +57,54 @@ class RAGSystem:
                 'embeddings': [],
                 'metadata': []
             }
-    
+
     def save_database(self):
         """Save database to JSON file"""
         with open(self.json_db_path, 'w', encoding='utf-8') as f:
             json.dump(self.database, f, indent=2, ensure_ascii=False)
-     
+
     def add_document(self, text: str, metadata: dict = None):
         """Add document to database with embedding"""
         # ประมวลผลข้อความเพื่อหาเวกเตอร์ของข้อความ
         embedding = self.embedding_model.encode([text])[0]
-        
+
         # เพิ่มข้อมูลลงในฐานข้อมูล
         self.database['documents'].append(text)
         self.database['embeddings'].append(embedding.tolist())
         self.database['metadata'].append(metadata or {})
-        
+
         # Save ฐานข้อมูลลงในไฟล์ JSON
         self.save_database()
         self.create_faiss_index()
-    
+
     def create_faiss_index(self):
         """Create FAISS index for similarity search"""
         if not self.database['embeddings']:
             return
-        
+
         # แปลงข้อมูลเป็น numpy array
         embeddings = np.array(self.database['embeddings'], dtype='float32')
         dimension = embeddings.shape[1]
 
         # สร้าง FAISS index
         self.index = faiss.IndexFlatL2(dimension)
-        
+
         # เพิ่มข้อมูลลงใน FAISS index
         self.index.add(embeddings)
-    
+
     def retrieve_documents(self, query: str, top_k: int = 1):
         """Retrieve most relevant documents"""
         if not self.database['embeddings']:
             return []
-        
+
         # แปลงข้อความเป็นเวกเตอร์
         query_embedding = self.embedding_model.encode([query])
-        
+
         # ค้นหาเอกสารที่เกี่ยวข้องด้วย similarity search
         D, I = self.index.search(query_embedding, top_k)
-        
+
         return [self.database['documents'][i] for i in I[0]]
-    
+
     def clear_database(self):
         """Clear database and save to JSON file"""
         self.database = {
@@ -148,18 +144,59 @@ async def lifespan(app: FastAPI):
 - ติดต่อเจ้าหน้าที่ทางตำรวจหรือหน่วยงานที่เกี่ยวข้องทันทีผ่านหมายเลข **1669** เพื่อขอความช่วยเหลือ
 - หากมีผู้บาดเจ็บ ให้ให้ความช่วยเหลือเบื้องต้นและรอการมาถึงของทีมแพทย์""",
     ]
-    
     # เพิ่มข้อมูลตัวอย่างลงใน RAG
     for doc in sample_documents:
         rag.add_document(doc)
-        
+
     yield
 
     # ลบข้อมูลที่ใช้ในการทดสอบออกจาก RAG
     rag.clear_database()
 
-# สร้าง FastAPI แอปพร้อมกับ lifespan
 app = FastAPI(lifespan=lifespan)
+
+# ข้อความคู่มือสำหรับฟีเจอร์ Emergency
+EMERGENCY_MANUAL = """
+# คู่มือการใช้งานฟีเจอร์ "Emergency"
+**ฟังก์ชันหลัก:**
+- **คำแนะนำในกรณีฉุกเฉิน**: กดปุ่ม "Emergency" เพื่อรับคำแนะนำในสถานการณ์ฉุกเฉินต่างๆ
+- **ถามตอบกับบอท**: พิมพ์คำถามเกี่ยวกับสถานการณ์ฉุกเฉิน เช่น "ช้างเหยียบรถควรทำยังไง" เพื่อรับคำตอบทันที
+**วิธีใช้งาน:**
+1. เปิดแอป Line และไปที่แชทบอทที่เกี่ยวข้อง
+2. กดปุ่ม **"Emergency"** ที่เมนูหลักหรือแถบด้านล่าง
+3. เลือกสถานการณ์ฉุกเฉินที่ต้องการ หรือพิมพ์คำถามของคุณ
+4. บอทจะแนะนำขั้นตอนการจัดการสถานการณ์ให้คุณ
+**ตัวอย่างการใช้งาน:**
+- **สถานการณ์**: ช้างเหยียบรถ
+- **การดำเนินการ**: กด "Emergency" > เลือก "ช้างเหยียบรถ" หรือพิมพ์ "ช้างเหยียบรถควรทำยังไง"
+- **คำตอบจากบอท**: ให้คำแนะนำเกี่ยวกับการติดต่อเจ้าหน้าที่ การตรวจสอบความเสียหาย และขั้นตอนการแก้ไข
+"""
+
+# ข้อความคู่มือสำหรับฟีเจอร์ ระวังช้าง
+WATCH_ELEPHANT_MANUAL = """
+# คู่มือการใช้งานฟีเจอร์ "ระวังช้าง"
+**ฟังก์ชันหลัก:**
+- **ตรวจสอบเส้นทางปลอดภัยจากช้าง**: กดปุ่ม "ระวังช้าง" เพื่อรับลิงก์ตรวจสอบเส้นทางที่ปลอดภัยจากช้าง
+**วิธีใช้งาน:**
+1. เปิดแอป Line และไปที่แชทบอทที่เกี่ยวข้อง
+2. กดปุ่ม **"ระวังช้าง"** ที่เมนูหลักหรือแถบด้านล่าง
+3. บอทจะส่งลิงก์ไปยังแผนที่หรือเว็บไซต์ที่ให้ข้อมูลเส้นทางที่ปลอดภัย
+4. คลิกลิงก์เพื่อตรวจสอบและเลือกเส้นทางที่เหมาะสม
+**ตัวอย่างการใช้งาน:**
+- **สถานการณ์**: กำลังวางแผนเดินทางไปพื้นที่มีช้างบ่อย
+- **การดำเนินการ**: กด "ระวังช้าง"
+- **คำตอบจากบอท**: ส่งลิงก์แผนที่เส้นทางที่แนะนำให้หลีกเลี่ยงพื้นที่ช้าง เช่น Google Maps หรือเว็บไซต์ท้องถิ่น
+"""
+
+# ฟังก์ชันสำหรับตรวจสอบและตอบกลับข้อความคู่มือ
+def get_manual_response(user_message: str) -> str:
+    user_message = user_message.strip().lower()
+    if user_message == "emergency" or user_message == "คู่มือการใช้งาน":
+        return EMERGENCY_MANUAL
+    elif user_message == "ระวังช้าง":
+        return WATCH_ELEPHANT_MANUAL
+    else:
+        return None
 
 # Endpoint สำหรับการสร้าง Webhook
 @app.post('/message')
@@ -169,10 +206,10 @@ async def message(request: Request):
     if not signature:
         raise HTTPException(
             status_code=400, detail="X-Line-Signature header is missing")
-    
+
     # ข้อมูลที่ส่งมาจาก LINE Platform
     body = await request.body()
-    
+
     try:
         # เรียกใช้งาน Handler เพื่อจัดข้อความจาก LINE Platform
         handler.handle(body.decode("UTF-8"), signature)
@@ -188,14 +225,19 @@ def handle_message(event: MessageEvent):
         # ตรวจสอบ Message ว่าเป็นประเภทข้อความ Text
         if isinstance(event.message, TextMessageContent):
             user_message = event.message.text
-            # การค้นหาข้อมูลจาก RAG
-            retrieved_docs = rag.retrieve_documents(user_message, top_k=1)
-            if retrieved_docs:
-                # ตอบกลับด้วยข้อความที่ดึงมาจาก RAG
-                reply = retrieved_docs[0]
+            # ตรวจสอบว่าผู้ใช้ต้องการคู่มือการใช้งานหรือไม่
+            manual_response = get_manual_response(user_message)
+            if manual_response:
+                reply = manual_response
             else:
-                reply = "ขออภัย ฉันไม่เข้าใจคำถามของคุณ กรุณาลองใหม่อีกครั้ง"
-            
+                # การค้นหาข้อมูลจาก RAG
+                retrieved_docs = rag.retrieve_documents(user_message, top_k=1)
+                if retrieved_docs:
+                    # ตอบกลับด้วยข้อความที่ดึงมาจาก RAG
+                    reply = retrieved_docs[0]
+                else:
+                    reply = "ขออภัย ฉันไม่เข้าใจคำถามของคุณ กรุณาลองใหม่อีกครั้ง"
+
             # Reply ข้อมูลกลับไปยัง LINE
             line_bot_api.reply_message_with_http_info(
                 ReplyMessageRequest(
@@ -222,7 +264,7 @@ def handle_message(event: MessageEvent):
                     )
                 )
                 return
-            
+
             if image.size[0] * image.size[1] > 1024 * 1024:
                 line_bot_api.reply_message_with_http_info(
                     ReplyMessageRequest(
@@ -253,7 +295,7 @@ async def test_message_rag(text: str):
         reply = retrieved_docs[0]
     else:
         reply = "ขออภัย ฉันไม่เข้าใจคำถามของคุณ กรุณาลองใหม่อีกครั้ง"
-    
+
     return {
         "answer": reply
     }
