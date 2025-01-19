@@ -5,7 +5,7 @@ import uvicorn
 import numpy as np
 import os
 import faiss
- 
+  
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Form
 from linebot import LineBotApi, WebhookHandler
 from linebot.models import (
