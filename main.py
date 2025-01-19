@@ -19,6 +19,7 @@ from linebot.models import (
     TextComponent,
     ButtonComponent,
     URIAction,
+    PostbackAction,
 )
 from linebot.exceptions import InvalidSignatureError
 from sentence_transformers import SentenceTransformer
@@ -136,14 +137,13 @@ def create_flex_message(text: str) -> FlexSendMessage:
         header=BoxComponent(
             layout='vertical',
             backgroundColor='#1eb900',  # สีเขียวสวยๆ
-            paddingAll='20px',
+            paddingAll='10px',
             contents=[
-                TextComponent(
-                    text="WildSafe",
-                    weight='bold', 
-                    size='xl',
-                    color='#FFFFFF',
-                    align='center'
+                ButtonComponent(
+                    style='primary',
+                    height='sm',
+                    action=PostbackAction(label="เมนูหลัก", data=""),
+                    color='#1eb900',  # สีเขียวตรงกับหัวข้อ
                 )
             ]
         ),
@@ -162,7 +162,6 @@ def create_flex_message(text: str) -> FlexSendMessage:
             contents=[
                 ButtonComponent(
                     style='primary',
-                    color='#1eb900',  # สีปุ่มตรงกับหัวข้อ
                     action=URIAction(
                         type='uri',
                         label='GO MAP',
@@ -180,14 +179,13 @@ def create_carousel_message() -> FlexSendMessage:
         header=BoxComponent(
             layout='vertical',
             backgroundColor='#1eb900',  # สีเขียวสวยๆ
-            paddingAll='20px',
+            paddingAll='10px',
             contents=[
-                TextComponent(
-                    text="WildSafe",
-                    weight='bold',
-                    size='xl',
-                    color='#FFFFFF',
-                    align='center'
+                ButtonComponent(
+                    style='primary',
+                    height='sm',
+                    action=PostbackAction(label="เมนูหลัก", data=""),
+                    color='#1eb900',  # สีเขียวตรงกับหัวข้อ
                 )
             ]
         ),
@@ -206,7 +204,6 @@ def create_carousel_message() -> FlexSendMessage:
             contents=[
                 ButtonComponent(
                     style='primary',
-                    color='#1eb900',  # สีปุ่มตรงกับหัวข้อ
                     action=URIAction(
                         type='uri',
                         label='GO MAP',
@@ -221,15 +218,14 @@ def create_carousel_message() -> FlexSendMessage:
     bubble2 = BubbleContainer(
         header=BoxComponent(
             layout='vertical',
-            backgroundColor='#1eb900',  # ใช้ backgroundColor เพื่อความสม่ำเสมอ
-            paddingAll='20px',
+            backgroundColor='#1eb900',  # สีเขียวสวยๆ
+            paddingAll='10px',
             contents=[
-                TextComponent(
-                    text="WildSafe",
-                    weight='bold',
-                    size='xl',
-                    color='#FFFFFF',
-                    align='center'
+                ButtonComponent(
+                    style='primary',
+                    height='sm',
+                    action=PostbackAction(label="เมนูหลัก", data=""),
+                    color='#1eb900',  # สีเขียวตรงกับหัวข้อ
                 )
             ]
         ),
@@ -248,7 +244,6 @@ def create_carousel_message() -> FlexSendMessage:
             contents=[
                 ButtonComponent(
                     style='primary',
-                    color='#1eb900',  # สีปุ่มตรงกับหัวข้อ
                     action=URIAction(
                         type='uri',
                         label='GO MAP',
@@ -293,14 +288,13 @@ def handle_message(event: MessageEvent):
                         header=BoxComponent(
                             layout='vertical',
                             backgroundColor='#1eb900',  # สีเขียวสวยๆ
-                            paddingAll='20px',
+                            paddingAll='10px',
                             contents=[
-                                TextComponent(
-                                    text="WildSafe",
-                                    weight='bold',
-                                    size='xl',
-                                    color='#FFFFFF',
-                                    align='center'
+                                ButtonComponent(
+                                    style='primary',
+                                    height='sm',
+                                    action=PostbackAction(label="เมนูหลัก", data=""),
+                                    color='#1eb900',  # สีเขียวตรงกับหัวข้อ
                                 )
                             ]
                         ),
@@ -318,7 +312,6 @@ def handle_message(event: MessageEvent):
                             contents=[
                                 ButtonComponent(
                                     style='primary',
-                                    color='#1eb900',  # สีปุ่มตรงกับหัวข้อ
                                     action=URIAction(
                                         type='uri',
                                         label='GO MAP',
