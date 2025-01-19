@@ -322,7 +322,7 @@ def handle_message(event: MessageEvent):
             [reply]
         )
 
-elif isinstance(event.message, ImageMessage):
+    elif isinstance(event.message, ImageMessage):
         try:
             headers = {"Authorization": f"Bearer {ACCESS_TOKEN}"}
             url = f"https://api-data.line.me/v2/bot/message/{event.message.id}/content"
@@ -343,7 +343,6 @@ elif isinstance(event.message, ImageMessage):
             event.reply_token,
             [reply]
         )
-
 @app.get('/test-message')
 async def test_message_rag(text: str):
     """
