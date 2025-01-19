@@ -8,14 +8,25 @@ import faiss
 
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Form
 from linebot.v3 import WebhookHandler
-from linebot.v3.messaging import (Configuration,
-                                  ApiClient,
-                                  MessagingApi,
-                                  ReplyMessageRequest,
-                                  TextMessage)
-from linebot.v3.webhooks import (MessageEvent,
-                                 TextMessageContent,
-                                 ImageMessageContent)
+from linebot.v3.messaging import (
+    Configuration,
+    ApiClient,
+    MessagingApi,
+    ReplyMessageRequest,
+    TextMessage,
+    FlexMessage,
+    BubbleContainer,
+    CarouselContainer,
+    BoxComponent,
+    TextComponent,
+    ButtonComponent,
+    URIAction,
+)
+from linebot.v3.webhooks import (
+    MessageEvent,
+    TextMessageContent,
+    ImageMessageContent
+)
 from linebot.v3.exceptions import InvalidSignatureError
 from sentence_transformers import SentenceTransformer
 from typing import Dict
@@ -24,8 +35,8 @@ from contextlib import asynccontextmanager
 app = FastAPI()
 
 # ข้อมูล token และ channel secret สำหรับ LINE
-ACCESS_TOKEN = os.getenv("LINE_ACCESS_TOKEN", "RMuXBCLD7tGSbkGgdELH7Vz9+Qz0YhqCIeKBhpMdKvOVii7W2L9rNpAHjYGigFN4ORLknMxhuWJYKIX3uLrY1BUg7E3Bk0v3Fmc5ZIC53d8fOdvIMyZQ6EdaOS0a6kejeqcX/dRFI/JfiFJr5mdwZgdB04t89/1O/w1cDnyilFU=")
-CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET", "175149695b4d312eabb9df4b7e3e7a95")
+ACCESS_TOKEN = os.getenv("LINE_ACCESS_TOKEN", "YOUR_LINE_ACCESS_TOKEN")
+CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET", "YOUR_LINE_CHANNEL_SECRET")
 
 # การเชื่อมต่อ และตั้งค่าข้อมูลเพื่อเรียกใช้งาน LINE Messaging API
 configuration = Configuration(access_token=ACCESS_TOKEN)
@@ -104,6 +115,7 @@ rag = RAGSystem()
 async def lifespan(app: FastAPI):
     # ข้อมูลตัวอย่างที่ใช้สำหรับ RAG
     sample_documents = [
+        # เพิ่มเอกสารตัวอย่างที่นี่ถ้าต้องการ
     ]
     # เพิ่มข้อมูลตัวอย่างลงใน RAG
     for doc in sample_documents:
@@ -118,25 +130,15 @@ app = FastAPI(lifespan=lifespan)
 
 # ข้อความคู่มือสำหรับฟีเจอร์ Emergency
 EMERGENCY_MANUAL = """
-# คู่มือการใช้งานฟีเจอร์ "Emergency"
+คู่มือการใช้งานฟีเจอร์ "Emergency"
 **ฟังก์ชันหลัก:**
 - **คำแนะนำในกรณีฉุกเฉิน**: กดปุ่ม "Emergency" เพื่อรับคำแนะนำในสถานการณ์ฉุกเฉินต่างๆ
 - **ถามตอบกับบอท**: พิมพ์คำถามเกี่ยวกับสถานการณ์ฉุกเฉิน เช่น "ช้างเหยียบรถควรทำยังไง" เพื่อรับคำตอบทันที
-**วิธีใช้งาน:**
-1. เปิดแอป Line และไปที่แชทบอทที่เกี่ยวข้อง
-2. กดปุ่ม **"Emergency"** ที่เมนูหลักหรือแถบด้านล่าง
-3. เลือกสถานการณ์ฉุกเฉินที่ต้องการ หรือพิมพ์คำถามของคุณ
-4. บอทจะแนะนำขั้นตอนการจัดการสถานการณ์ให้คุณ
-**ตัวอย่างการใช้งาน:**
-- **สถานการณ์**: ช้างเหยียบรถ
-- **การดำเนินการ**: กด "Emergency" > เลือก "ช้างเหยียบรถ" หรือพิมพ์ "ช้างเหยียบรถควรทำยังไง"
-- **คำตอบจากบอท**: ให้คำแนะนำเกี่ยวกับการติดต่อเจ้าหน้าที่ การตรวจสอบความเสียหาย และขั้นตอนการแก้ไข
 """
 
 # ข้อความคู่มือสำหรับฟีเจอร์ ระวังช้าง
 WATCH_ELEPHANT_MANUAL = """
 เมื่อช้างเข้าใกล้ในสถานการณ์ฉุกเฉิน ควรทำตามขั้นตอนดังนี้:
-
 1. รักษาความสงบ: หลีกเลี่ยงการแสดงอาการตกใจหรือกลัว
 2. หลีกเลี่ยงการสบตา: ไม่มองตาช้างโดยตรง
 3. ค่อยๆ ถอยหลังออก: เคลื่อนไหวอย่างช้าๆ เพื่อสร้างระยะห่าง
@@ -146,7 +148,7 @@ WATCH_ELEPHANT_MANUAL = """
 
 # ข้อความสำหรับ "ตรวจสอบช้างก่อนเดินทาง"
 CHECK_ELEPHANT_MANUAL = """
-**🔍 ตรวจช้างก่อนเดินทาง!** เช็คความปลอดภัยก่อนออกเดินทางที่นี่ 👉 [คลิกเลย](https://aprlabtop.com/Honey_test/chang_v3.php)
+ตรวจช้างก่อนเดินทาง!** เช็คความปลอดภัยก่อนออกเดินทางที่นี่ 👉 [คลิกเลย](https://aprlabtop.com/Honey_test/chang_v3.php)
 """
 
 # ข้อความคู่มือสำหรับการติดต่อเจ้าหน้าที่
@@ -162,7 +164,7 @@ def get_manual_response(user_message: str) -> str:
     user_message = user_message.strip().lower()
     if user_message in ["emergency", "คู่มือการใช้งาน"]:
         return EMERGENCY_MANUAL
-    elif user_message in ["EmerGency เกิดเหตุฉุกเฉินทำยังไง", "มีเหตุร้ายใกล้ตัว"]:
+    elif user_message in ["emergency เกิดเหตุฉุกเฉินทำยังไง", "มีเหตุร้ายใกล้ตัว"]:
         return WATCH_ELEPHANT_MANUAL
     elif user_message == "ตรวจสอบช้างก่อนเดินทาง":
         return CHECK_ELEPHANT_MANUAL
@@ -170,6 +172,110 @@ def get_manual_response(user_message: str) -> str:
         return OFFICER_MANUAL
     else:
         return None
+
+# ฟังก์ชันสำหรับสร้าง Flex Message ที่มีข้อความในกล่อง
+def create_flex_message(text: str) -> FlexMessage:
+    bubble = BubbleContainer(
+        direction='ltr',
+        body=BoxComponent(
+            layout='vertical',
+            contents=[
+                TextComponent(
+                    text=text,
+                    wrap=True,
+                    weight='regular',
+                    size='md',
+                    color='#000000'
+                )
+            ],
+            padding_all='10px',
+            background_color='#F0F0F0',  # สีพื้นหลังของกล่อง
+            border_width='1px',
+            border_color='#CCCCCC',
+            corner_radius='10px'
+        )
+    )
+    
+    return FlexMessage(alt_text="Flex Message", contents=bubble)
+
+# ฟังก์ชันสำหรับสร้าง Carousel Flex Message
+def create_carousel_message() -> FlexMessage:
+    # บับเบิลแรก
+    bubble1 = BubbleContainer(
+        direction='ltr',
+        body=BoxComponent(
+            layout='horizontal',
+            contents=[
+                TextComponent(
+                    text="Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+                    wrap=True,
+                    size='md',
+                    color='#000000'
+                )
+            ],
+            padding_all='10px',
+            background_color='#F0F0F0',
+            border_width='1px',
+            border_color='#CCCCCC',
+            corner_radius='10px'
+        ),
+        footer=BoxComponent(
+            layout='horizontal',
+            contents=[
+                ButtonComponent(
+                    style='primary',
+                    action=URIAction(
+                        label='Go',
+                        uri='https://example.com'
+                    )
+                )
+            ]
+        )
+    )
+
+    # บับเบิลที่สอง
+    bubble2 = BubbleContainer(
+        direction='ltr',
+        body=BoxComponent(
+            layout='horizontal',
+            contents=[
+                TextComponent(
+                    text="Hello, World!",
+                    wrap=True,
+                    size='md',
+                    color='#000000'
+                )
+            ],
+            padding_all='10px',
+            background_color='#F0F0F0',
+            border_width='1px',
+            border_color='#CCCCCC',
+            corner_radius='10px'
+        ),
+        footer=BoxComponent(
+            layout='horizontal',
+            contents=[
+                ButtonComponent(
+                    style='primary',
+                    action=URIAction(
+                        label='Go',
+                        uri='https://example.com'
+                    )
+                )
+            ]
+        )
+    )
+
+    # สร้าง Carousel Container ที่บรรจุหลายบับเบิล
+    carousel = CarouselContainer(
+        contents=[bubble1, bubble2]
+    )
+
+    # สร้าง Flex Message ด้วย Carousel
+    return FlexMessage(
+        alt_text="Carousel Message",
+        contents=carousel
+    )
 
 # Endpoint สำหรับการสร้าง Webhook
 @app.post('/message')
@@ -189,7 +295,7 @@ async def message(request: Request):
     except InvalidSignatureError:
         raise HTTPException(status_code=400, detail="Invalid signature")
 
-# Function สำหรับจัดการข้อมูลที่ส่งมากจาก LINE Platform
+# ปรับปรุงฟังก์ชัน handle_message เพื่อใช้ Carousel Flex Message
 @handler.add(MessageEvent, message=(TextMessageContent, ImageMessageContent))
 def handle_message(event: MessageEvent):
     with ApiClient(configuration) as api_client:
@@ -201,29 +307,69 @@ def handle_message(event: MessageEvent):
             # ตรวจสอบว่าผู้ใช้ต้องการคู่มือการใช้งานหรือไม่
             manual_response = get_manual_response(user_message)
             if manual_response:
-                reply = manual_response
+                reply = create_carousel_message()  # ใช้ Carousel Flex Message แทนข้อความธรรมดา
             else:
                 # การค้นหาข้อมูลจาก RAG
                 retrieved_docs = rag.retrieve_documents(user_message, top_k=3)  # เปลี่ยน top_k เป็น 3
 
                 if retrieved_docs:
-                    # เลือกเอกสารที่ไม่มีลิงก์เป็นลำดับแรก
-                    reply = None
+                    # สร้างบับเบิลสำหรับแต่ละเอกสารที่ค้นพบ
+                    bubbles = []
                     for doc in retrieved_docs:
                         if "http" not in doc:
-                            reply = doc
-                            break
-                    # ถ้าไม่พบเอกสารที่ไม่มีลิงก์ ให้ใช้เอกสารแรก
-                    if not reply:
-                        reply = retrieved_docs[0]
+                            text = doc
+                        else:
+                            text = "ดูข้อมูลเพิ่มเติมที่นี่"  # หรือข้อความอื่นๆ ตามต้องการ
+                        bubble = BubbleContainer(
+                            direction='ltr',
+                            body=BoxComponent(
+                                layout='horizontal',
+                                contents=[
+                                    TextComponent(
+                                        text=text,
+                                        wrap=True,
+                                        size='md',
+                                        color='#000000'
+                                    )
+                                ],
+                                padding_all='10px',
+                                background_color='#F0F0F0',
+                                border_width='1px',
+                                border_color='#CCCCCC',
+                                corner_radius='10px'
+                            ),
+                            footer=BoxComponent(
+                                layout='horizontal',
+                                contents=[
+                                    ButtonComponent(
+                                        style='primary',
+                                        action=URIAction(
+                                            label='Go',
+                                            uri='https://example.com'  # ปรับปรุง URI ตามเอกสาร
+                                        )
+                                    )
+                                ]
+                            )
+                        )
+                        bubbles.append(bubble)
+                    
+                    # สร้าง Carousel ด้วยบับเบิลที่สร้างขึ้น
+                    carousel = CarouselContainer(contents=bubbles)
+                    reply = FlexMessage(
+                        alt_text="Carousel Message",
+                        contents=carousel
+                    )
                 else:
-                    reply = "ขออภัย ฉันไม่เข้าใจคำถามของคุณ กรุณาลองใหม่อีกครั้ง"
+                    default_text = "ขออภัย ฉันไม่เข้าใจคำถามของคุณ กรุณาลองใหม่อีกครั้ง"
+                    reply = create_carousel_message()  # หรือใช้ FlexMessage แบบเดิม
+                    # หรือใช้ FlexMessage แบบบับเบิลเดียว
+                    # reply = create_flex_message(default_text)
 
             # Reply ข้อมูลกลับไปยัง LINE
             line_bot_api.reply_message_with_http_info(
                 ReplyMessageRequest(
                     replyToken=event.reply_token,
-                    messages=[TextMessage(text=reply)]
+                    messages=[reply]
                 )
             )
 
@@ -238,30 +384,38 @@ def handle_message(event: MessageEvent):
                 image_data = BytesIO(response.content)
                 image = Image.open(image_data)
             except Exception as e:
+                error_reply = create_carousel_message()  # ใช้ Carousel Flex Message สำหรับข้อผิดพลาด
+                # หรือใช้ FlexMessage แบบบับเบิลเดียว
+                # error_reply = create_flex_message("เกิดข้อผิดพลาด, กรุณาลองใหม่อีกครั้ง🙏🏻")
                 line_bot_api.reply_message_with_http_info(
                     ReplyMessageRequest(
                         replyToken=event.reply_token,
-                        messages=[TextMessage(text="เกิดข้อผิดพลาด, กรุณาลองใหม่อีกครั้ง🙏🏻")]
+                        messages=[error_reply]
                     )
                 )
                 return
 
             if image.size[0] * image.size[1] > 1024 * 1024:
+                size_error_reply = create_carousel_message()  # ใช้ Carousel Flex Message สำหรับข้อผิดพลาดขนาดภาพ
+                # หรือใช้ FlexMessage แบบบับเบิลเดียว
+                # size_error_reply = create_flex_message("ขอโทษครับ ภาพมีขนาดใหญ่เกินไป กรุณาลดขนาดภาพและลองใหม่อีกครั้ง")
                 line_bot_api.reply_message_with_http_info(
                     ReplyMessageRequest(
                         replyToken=event.reply_token,
-                        messages=[TextMessage(text="ขอโทษครับ ภาพมีขนาดใหญ่เกินไป กรุณาลดขนาดภาพและลองใหม่อีกครั้ง")]
+                        messages=[size_error_reply]
                     )
                 )
                 return
 
             # เนื่องจากเราไม่ใช้ Gemini ในการสร้างคำตอบจากรูปภาพ
             # คุณอาจต้องการเพิ่มฟังก์ชันการประมวลผลภาพเพิ่มเติมเอง
-            # สำหรับตัวอย่างนี้ จะตอบกลับด้วยข้อความทั่วไป
+            # สำหรับตัวอย่างนี้ จะตอบกลับด้วย Carousel Flex Message
+            image_reply = create_carousel_message()  # หรือใช้ FlexMessage แบบบับเบิลเดียว
+            # image_reply = create_flex_message("ขณะนี้ระบบไม่สามารถประมวลผลรูปภาพได้ กรุณาสอบถามด้วยข้อความแทนค่ะ 🙏🏻")
             line_bot_api.reply_message_with_http_info(
                 ReplyMessageRequest(
                     replyToken=event.reply_token,
-                    messages=[TextMessage(text="ขณะนี้ระบบไม่สามารถประมวลผลรูปภาพได้ กรุณาสอบถามด้วยข้อความแทนค่ะ 🙏🏻")]
+                    messages=[image_reply]
                 )
             )
 
