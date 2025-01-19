@@ -19,7 +19,6 @@ from linebot.models import (
     TextComponent,
     ButtonComponent,
     URIAction,
-    PostbackAction,
 )
 from linebot.exceptions import InvalidSignatureError
 from sentence_transformers import SentenceTransformer
@@ -132,24 +131,21 @@ def get_manual_response(user_message: str) -> str:
     else:
         return None
 
+# ฟังก์ชันสำหรับสร้าง Flex Message แบบกล่องเดียว
 def create_flex_message(text: str) -> FlexSendMessage:
     bubble = BubbleContainer(
         header=BoxComponent(
             layout='vertical',
-            backgroundColor='#1eb900',  # สีเขียวสวยๆ
-            paddingAll='10px',
             contents=[
-                ButtonComponent(
-                    style='primary',
-                    height='sm',
-                    action=PostbackAction(label="เมนูหลัก", data=""),
-                    color='#1eb900',  # สีเขียวตรงกับหัวข้อ
+                TextComponent(
+                    text="WildSafe",
+                    weight='bold',
+                    align='center'
                 )
             ]
         ),
         body=BoxComponent(
             layout='vertical',
-            paddingAll='20px',
             contents=[
                 TextComponent(
                     text=text,
@@ -172,26 +168,23 @@ def create_flex_message(text: str) -> FlexSendMessage:
         )
     )
     return FlexSendMessage(alt_text="WildSafe Message", contents=bubble)
-  
+
+# ฟังก์ชันสำหรับสร้าง Carousel Message
 def create_carousel_message() -> FlexSendMessage:
     # บับเบิลแรก
     bubble1 = BubbleContainer(
         header=BoxComponent(
             layout='vertical',
-            backgroundColor='#1eb900',  # สีเขียวสวยๆ
-            paddingAll='10px',
             contents=[
-                ButtonComponent(
-                    style='primary',
-                    height='sm',
-                    action=PostbackAction(label="เมนูหลัก", data=""),
-                    color='#1eb900',  # สีเขียวตรงกับหัวข้อ
+                TextComponent(
+                    text="WildSafe",
+                    weight='bold',
+                    align='center'
                 )
             ]
         ),
         body=BoxComponent(
             layout='horizontal',
-            paddingAll='20px',
             contents=[
                 TextComponent(
                     text="Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
@@ -218,20 +211,16 @@ def create_carousel_message() -> FlexSendMessage:
     bubble2 = BubbleContainer(
         header=BoxComponent(
             layout='vertical',
-            backgroundColor='#1eb900',  # สีเขียวสวยๆ
-            paddingAll='10px',
             contents=[
-                ButtonComponent(
-                    style='primary',
-                    height='sm',
-                    action=PostbackAction(label="เมนูหลัก", data=""),
-                    color='#1eb900',  # สีเขียวตรงกับหัวข้อ
+                TextComponent(
+                    text="WildSafe",
+                    weight='bold',
+                    align='center'
                 )
             ]
         ),
         body=BoxComponent(
             layout='horizontal',
-            paddingAll='20px',
             contents=[
                 TextComponent(
                     text="Hello, World!",
@@ -287,14 +276,11 @@ def handle_message(event: MessageEvent):
                     bubble = BubbleContainer(
                         header=BoxComponent(
                             layout='vertical',
-                            backgroundColor='#1eb900',  # สีเขียวสวยๆ
-                            paddingAll='10px',
                             contents=[
-                                ButtonComponent(
-                                    style='primary',
-                                    height='sm',
-                                    action=PostbackAction(label="เมนูหลัก", data=""),
-                                    color='#1eb900',  # สีเขียวตรงกับหัวข้อ
+                                TextComponent(
+                                    text="WildSafe",
+                                    weight='bold',
+                                    align='center'
                                 )
                             ]
                         ),
@@ -357,7 +343,6 @@ def handle_message(event: MessageEvent):
             event.reply_token,
             [reply]
         )
-
 @app.get('/test-message')
 async def test_message_rag(text: str):
     """
