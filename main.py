@@ -19,7 +19,6 @@ from linebot.models import (
     TextComponent,
     ButtonComponent,
     URIAction,
-    BoxBackground,  # เพิ่มตรงนี้
 )
 from linebot.exceptions import InvalidSignatureError
 from sentence_transformers import SentenceTransformer
@@ -132,54 +131,54 @@ def get_manual_response(user_message: str) -> str:
     else:
         return None
 
-# ฟังก์ชันสำหรับสร้าง Flex Message แบบกล่องเดียว
 def create_flex_message(text: str) -> FlexSendMessage:
-   bubble = BubbleContainer(
-       header=BoxComponent(
-           layout='vertical',
-           background=BoxBackground(color='#1eb900'),
-           paddingAll='20px',
-           contents=[
-               TextComponent(
-                   text="WildSafe",
-                   weight='bold', 
-                   size='xl',
-                   color='#FFFFFF',
-                   align='center'
-               )
-           ]
-       ),
-       body=BoxComponent(
-           layout='horizontal',
-           paddingAll='20px',
-           contents=[
-               TextComponent(
-                   text=text,
-                   wrap=True
-               )
-           ]
-       ),
-       footer=BoxComponent(
-           layout='horizontal',
-           contents=[
-               ButtonComponent(
-                   style='primary',
-                   action=URIAction(
-                       type='uri',
-                       label='GO MAP',
-                       uri='https://aprlabtop.com/Honey_test/chang_v3.php'
-                   )
-               )
-           ]
-       )
-   )
-   return FlexSendMessage(alt_text="WildSafe Message", contents=bubble)
+    bubble = BubbleContainer(
+        header=BoxComponent(
+            layout='vertical',
+            backgroundColor='#1eb900',  # เปลี่ยนจาก background เป็น backgroundColor
+            paddingAll='20px',
+            contents=[
+                TextComponent(
+                    text="WildSafe",
+                    weight='bold', 
+                    size='xl',
+                    color='#FFFFFF',
+                    align='center'
+                )
+            ]
+        ),
+        body=BoxComponent(
+            layout='vertical',
+            paddingAll='20px',
+            contents=[
+                TextComponent(
+                    text=text,
+                    wrap=True
+                )
+            ]
+        ),
+        footer=BoxComponent(
+            layout='horizontal',
+            contents=[
+                ButtonComponent(
+                    style='primary',
+                    action=URIAction(
+                        type='uri',
+                        label='GO MAP',
+                        uri='https://aprlabtop.com/Honey_test/chang_v3.php'
+                    )
+                )
+            ]
+        )
+    )
+    return FlexSendMessage(alt_text="WildSafe Message", contents=bubble)
+  
 def create_carousel_message() -> FlexSendMessage:
     # บับเบิลแรก
     bubble1 = BubbleContainer(
         header=BoxComponent(
             layout='vertical',
-            background=BoxBackground(color='#1eb900'),
+            backgroundColor='#1eb900',  # เปลี่ยนจาก background เป็น backgroundColor
             paddingAll='20px',
             contents=[
                 TextComponent(
@@ -290,7 +289,7 @@ def handle_message(event: MessageEvent):
                     bubble = BubbleContainer(
                         header=BoxComponent(
                             layout='vertical',
-                            backgroundColor='#27AE60',
+                            backgroundColor='#1eb900',  # เปลี่ยนจาก background เป็น backgroundColor
                             paddingAll='20px',
                             contents=[
                                 TextComponent(
