@@ -137,10 +137,12 @@ def create_flex_message(text: str) -> FlexSendMessage:
         header=BoxComponent(
             layout='vertical',
             backgroundColor='#27AE60',  # เพิ่มบรรทัดนี้
+            paddingAll='20px',
             contents=[
                 TextComponent(
                     text="WildSafe",
                     weight='bold',
+                    size='xl',
                     color='#FFFFFF',
                     align='center'
                 )
@@ -178,10 +180,12 @@ def create_carousel_message() -> FlexSendMessage:
         header=BoxComponent(
             layout='vertical',
             backgroundColor='#27AE60',
+            paddingAll='20px',
             contents=[
                 TextComponent(
                     text="WildSafe",
                     weight='bold',
+                    size='xl',
                     color='#FFFFFF',
                     align='center'
                 )
@@ -283,10 +287,12 @@ def handle_message(event: MessageEvent):
                         header=BoxComponent(
                             layout='vertical',
                             backgroundColor='#27AE60',
+                            paddingAll='20px',
                             contents=[
                                 TextComponent(
                                     text="WildSafe",
                                     weight='bold',
+                                    size='xl',
                                     color='#FFFFFF',
                                     align='center'
                                 )
