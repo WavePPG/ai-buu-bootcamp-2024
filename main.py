@@ -9,6 +9,9 @@ import faiss
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Form
 from linebot import LineBotApi, WebhookHandler
 from linebot.models import (
+    MessageEvent,
+    TextMessage,
+    ImageMessage,
     FlexSendMessage,
     BubbleContainer,
     CarouselContainer,
@@ -18,11 +21,6 @@ from linebot.models import (
     URIAction,
 )
 from linebot.exceptions import InvalidSignatureError
-from linebot.webhooks import (
-    MessageEvent,
-    TextMessageContent,
-    ImageMessageContent,
-)
 from sentence_transformers import SentenceTransformer
 from typing import Dict
 from contextlib import asynccontextmanager
@@ -292,10 +290,10 @@ async def message(request: Request):
         raise HTTPException(status_code=400, detail="Invalid signature")
 
 # ปรับปรุงฟังก์ชัน handle_message เพื่อใช้ Carousel Flex Send Message
-@handler.add(MessageEvent, message=(TextMessageContent, ImageMessageContent))
+@handler.add(MessageEvent, message=(TextMessage, ImageMessage))
 def handle_message(event: MessageEvent):
     # ตรวจสอบ Message ว่าเป็นประเภทข้อความ Text
-    if isinstance(event.message, TextMessageContent):
+    if isinstance(event.message, TextMessage):
         user_message = event.message.text
         # ตรวจสอบว่าผู้ใช้ต้องการคู่มือการใช้งานหรือไม่
         manual_response = get_manual_response(user_message)
@@ -356,8 +354,14 @@ def handle_message(event: MessageEvent):
                 default_text = "ขออภัย ฉันไม่เข้าใจคำถามของคุณ กรุณาลองใหม่อีกครั้ง"
                 reply = create_flex_message(default_text)  # ใช้ Flex Send Message แบบกล่องเดียว
 
+        # Reply ข้อมูลกลับไปยัง LINE
+        line_bot_api.reply_message(
+            event.reply_token,
+            [reply]
+        )
+
     # ตรวจสอบ Message ว่าเป็นประเภทข้อความ Image
-    elif isinstance(event.message, ImageMessageContent):
+    elif isinstance(event.message, ImageMessage):
         # การขอข้อมูลภาพจาก LINE Service
         headers = {"Authorization": f"Bearer {ACCESS_TOKEN}"}
         url = f"https://api-data.line.me/v2/bot/message/{event.message.id}/content"
@@ -390,12 +394,6 @@ def handle_message(event: MessageEvent):
             event.reply_token,
             [image_reply]
         )
-
-    # Reply ข้อมูลกลับไปยัง LINE
-    line_bot_api.reply_message(
-        event.reply_token,
-        [reply]
-    )
 
 # Endpoint สำหรับทดสอบ RAG ด้วยข้อความ
 @app.get('/test-message')
