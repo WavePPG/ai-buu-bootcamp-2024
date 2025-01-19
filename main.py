@@ -136,10 +136,12 @@ def create_flex_message(text: str) -> FlexSendMessage:
     bubble = BubbleContainer(
         header=BoxComponent(
             layout='vertical',
+            backgroundColor='#27AE60',  # เพิ่มบรรทัดนี้
             contents=[
                 TextComponent(
                     text="WildSafe",
                     weight='bold',
+                    color='#FFFFFF',
                     align='center'
                 )
             ]
@@ -175,10 +177,12 @@ def create_carousel_message() -> FlexSendMessage:
     bubble1 = BubbleContainer(
         header=BoxComponent(
             layout='vertical',
+            backgroundColor='#27AE60',
             contents=[
                 TextComponent(
                     text="WildSafe",
                     weight='bold',
+                    color='#FFFFFF',
                     align='center'
                 )
             ]
@@ -211,10 +215,12 @@ def create_carousel_message() -> FlexSendMessage:
     bubble2 = BubbleContainer(
         header=BoxComponent(
             layout='vertical',
+          backgroundColor='#27AE60',
             contents=[
                 TextComponent(
                     text="WildSafe",
                     weight='bold',
+                    color='#FFFFFF',
                     align='center'
                 )
             ]
@@ -276,10 +282,12 @@ def handle_message(event: MessageEvent):
                     bubble = BubbleContainer(
                         header=BoxComponent(
                             layout='vertical',
+                            backgroundColor='#27AE60',
                             contents=[
                                 TextComponent(
                                     text="WildSafe",
                                     weight='bold',
+                                    color='#FFFFFF',
                                     align='center'
                                 )
                             ]
