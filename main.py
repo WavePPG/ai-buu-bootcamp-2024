@@ -7,13 +7,8 @@ import os
 import faiss
 
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Form
-from linebot import WebhookHandler
+from linebot import LineBotApi, WebhookHandler
 from linebot.models import (
-    Configuration,
-    ApiClient,
-    MessagingApi,
-    ReplyMessageRequest,
-    TextMessage,
     FlexSendMessage,
     BubbleContainer,
     CarouselContainer,
@@ -22,12 +17,12 @@ from linebot.models import (
     ButtonComponent,
     URIAction,
 )
+from linebot.exceptions import InvalidSignatureError
 from linebot.webhooks import (
     MessageEvent,
     TextMessageContent,
-    ImageMessageContent
+    ImageMessageContent,
 )
-from linebot.exceptions import InvalidSignatureError
 from sentence_transformers import SentenceTransformer
 from typing import Dict
 from contextlib import asynccontextmanager
@@ -39,8 +34,8 @@ ACCESS_TOKEN = os.getenv("LINE_ACCESS_TOKEN", "RMuXBCLD7tGSbkGgdELH7Vz9+Qz0YhqCI
 CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET", "175149695b4d312eabb9df4b7e3e7a95")
 
 # การเชื่อมต่อ และตั้งค่าข้อมูลเพื่อเรียกใช้งาน LINE Messaging API
-configuration = Configuration(access_token=ACCESS_TOKEN)
-handler = WebhookHandler(channel_secret=CHANNEL_SECRET)
+line_bot_api = LineBotApi(ACCESS_TOKEN)
+handler = WebhookHandler(CHANNEL_SECRET)
 
 class RAGSystem:
     def __init__(self, embedding_model: str = 'all-MiniLM-L6-v2'):
@@ -299,119 +294,108 @@ async def message(request: Request):
 # ปรับปรุงฟังก์ชัน handle_message เพื่อใช้ Carousel Flex Send Message
 @handler.add(MessageEvent, message=(TextMessageContent, ImageMessageContent))
 def handle_message(event: MessageEvent):
-    with ApiClient(configuration) as api_client:
-        line_bot_api = MessagingApi(api_client)
+    # ตรวจสอบ Message ว่าเป็นประเภทข้อความ Text
+    if isinstance(event.message, TextMessageContent):
+        user_message = event.message.text
+        # ตรวจสอบว่าผู้ใช้ต้องการคู่มือการใช้งานหรือไม่
+        manual_response = get_manual_response(user_message)
+        if manual_response:
+            reply = create_flex_message(manual_response)  # ใช้ Flex Send Message แบบกล่องเดียว
+        else:
+            # การค้นหาข้อมูลจาก RAG
+            retrieved_docs = rag.retrieve_documents(user_message, top_k=3)  # เปลี่ยน top_k เป็น 3
 
-        # ตรวจสอบ Message ว่าเป็นประเภทข้อความ Text
-        if isinstance(event.message, TextMessageContent):
-            user_message = event.message.text
-            # ตรวจสอบว่าผู้ใช้ต้องการคู่มือการใช้งานหรือไม่
-            manual_response = get_manual_response(user_message)
-            if manual_response:
-                reply = create_flex_message(manual_response)  # ใช้ Flex Send Message แบบกล่องเดียว
-            else:
-                # การค้นหาข้อมูลจาก RAG
-                retrieved_docs = rag.retrieve_documents(user_message, top_k=3)  # เปลี่ยน top_k เป็น 3
-
-                if retrieved_docs:
-                    # สร้างบับเบิลสำหรับแต่ละเอกสารที่ค้นพบ
-                    bubbles = []
-                    for doc in retrieved_docs:
-                        if "http" not in doc:
-                            text = doc
-                        else:
-                            text = "ดูข้อมูลเพิ่มเติมที่นี่"  # หรือข้อความอื่นๆ ตามต้องการ
-                        bubble = BubbleContainer(
-                            direction='ltr',
-                            body=BoxComponent(
-                                layout='horizontal',
-                                contents=[
-                                    TextComponent(
-                                        text=text,
-                                        wrap=True,
-                                        size='md',
-                                        color='#000000'
+            if retrieved_docs:
+                # สร้างบับเบิลสำหรับแต่ละเอกสารที่ค้นพบ
+                bubbles = []
+                for doc in retrieved_docs:
+                    if "http" not in doc:
+                        text = doc
+                    else:
+                        text = "ดูข้อมูลเพิ่มเติมที่นี่"  # หรือข้อความอื่นๆ ตามต้องการ
+                    bubble = BubbleContainer(
+                        direction='ltr',
+                        body=BoxComponent(
+                            layout='horizontal',
+                            contents=[
+                                TextComponent(
+                                    text=text,
+                                    wrap=True,
+                                    size='md',
+                                    color='#000000'
+                                )
+                            ],
+                            padding_all='10px',
+                            background_color='#F0F0F0',
+                            border_width='1px',
+                            border_color='#CCCCCC',
+                            corner_radius='10px'
+                        ),
+                        footer=BoxComponent(
+                            layout='horizontal',
+                            contents=[
+                                ButtonComponent(
+                                    style='primary',
+                                    action=URIAction(
+                                        label='Go',
+                                        uri='https://example.com'  # ปรับปรุง URI ตามเอกสาร
                                     )
-                                ],
-                                padding_all='10px',
-                                background_color='#F0F0F0',
-                                border_width='1px',
-                                border_color='#CCCCCC',
-                                corner_radius='10px'
-                            ),
-                            footer=BoxComponent(
-                                layout='horizontal',
-                                contents=[
-                                    ButtonComponent(
-                                        style='primary',
-                                        action=URIAction(
-                                            label='Go',
-                                            uri='https://example.com'  # ปรับปรุง URI ตามเอกสาร
-                                        )
-                                    )
-                                ]
-                            )
+                                )
+                            ]
                         )
-                        bubbles.append(bubble)
-                    
-                    # สร้าง Carousel ด้วยบับเบิลที่สร้างขึ้น
-                    carousel = CarouselContainer(contents=bubbles)
-                    reply = FlexSendMessage(
-                        alt_text="Carousel Message",
-                        contents=carousel
                     )
-                else:
-                    default_text = "ขออภัย ฉันไม่เข้าใจคำถามของคุณ กรุณาลองใหม่อีกครั้ง"
-                    reply = create_flex_message(default_text)  # ใช้ Flex Send Message แบบกล่องเดียว
+                    bubbles.append(bubble)
+                
+                # สร้าง Carousel ด้วยบับเบิลที่สร้างขึ้น
+                carousel = CarouselContainer(contents=bubbles)
+                reply = FlexSendMessage(
+                    alt_text="Carousel Message",
+                    contents=carousel
+                )
+            else:
+                default_text = "ขออภัย ฉันไม่เข้าใจคำถามของคุณ กรุณาลองใหม่อีกครั้ง"
+                reply = create_flex_message(default_text)  # ใช้ Flex Send Message แบบกล่องเดียว
 
-            # Reply ข้อมูลกลับไปยัง LINE
+    # ตรวจสอบ Message ว่าเป็นประเภทข้อความ Image
+    elif isinstance(event.message, ImageMessageContent):
+        # การขอข้อมูลภาพจาก LINE Service
+        headers = {"Authorization": f"Bearer {ACCESS_TOKEN}"}
+        url = f"https://api-data.line.me/v2/bot/message/{event.message.id}/content"
+        try:
+            response = requests.get(url, headers=headers, stream=True)
+            response.raise_for_status()
+            image_data = BytesIO(response.content)
+            image = Image.open(image_data)
+        except Exception as e:
+            error_reply = create_flex_message("เกิดข้อผิดพลาด, กรุณาลองใหม่อีกครั้ง🙏🏻")
             line_bot_api.reply_message(
-                ReplyMessageRequest(
-                    replyToken=event.reply_token,
-                    messages=[reply]
-                )
+                event.reply_token,
+                [error_reply]
             )
+            return
 
-        # ตรวจสอบ Message ว่าเป็นประเภทข้อความ Image
-        elif isinstance(event.message, ImageMessageContent):
-            # การขอข้อมูลภาพจาก LINE Service
-            headers = {"Authorization": f"Bearer {ACCESS_TOKEN}"}
-            url = f"https://api-data.line.me/v2/bot/message/{event.message.id}/content"
-            try:
-                response = requests.get(url, headers=headers, stream=True)
-                response.raise_for_status()
-                image_data = BytesIO(response.content)
-                image = Image.open(image_data)
-            except Exception as e:
-                error_reply = create_flex_message("เกิดข้อผิดพลาด, กรุณาลองใหม่อีกครั้ง🙏🏻")
-                line_bot_api.reply_message(
-                    ReplyMessageRequest(
-                        replyToken=event.reply_token,
-                        messages=[error_reply]
-                    )
-                )
-                return
-
-            if image.size[0] * image.size[1] > 1024 * 1024:
-                size_error_reply = create_flex_message("ขอโทษครับ ภาพมีขนาดใหญ่เกินไป กรุณาลดขนาดภาพและลองใหม่อีกครั้ง")
-                line_bot_api.reply_message(
-                    ReplyMessageRequest(
-                        replyToken=event.reply_token,
-                        messages=[size_error_reply]
-                    )
-                )
-                return
-
-            # เนื่องจากเราไม่ใช้ Gemini ในการสร้างคำตอบจากรูปภาพ
-            # คุณอาจต้องการเพิ่มฟังก์ชันการประมวลผลภาพเพิ่มเติมเอง
-            # สำหรับตัวอย่างนี้ จะตอบกลับด้วย Flex Send Message แบบกล่องเดียว
-            image_reply = create_flex_message("ขณะนี้ระบบไม่สามารถประมวลผลรูปภาพได้ กรุณาสอบถามด้วยข้อความแทนค่ะ 🙏🏻")
+        if image.size[0] * image.size[1] > 1024 * 1024:
+            size_error_reply = create_flex_message("ขอโทษครับ ภาพมีขนาดใหญ่เกินไป กรุณาลดขนาดภาพและลองใหม่อีกครั้ง")
             line_bot_api.reply_message(
-                ReplyMessageRequest(
-                    replyToken=event.reply_token,
-                    messages=[image_reply]
-                )
+                event.reply_token,
+                [size_error_reply]
             )
+            return
+
+        # เนื่องจากเราไม่ใช้ Gemini ในการสร้างคำตอบจากรูปภาพ
+        # คุณอาจต้องการเพิ่มฟังก์ชันการประมวลผลภาพเพิ่มเติมเอง
+        # สำหรับตัวอย่างนี้ จะตอบกลับด้วย Flex Send Message แบบกล่องเดียว
+        image_reply = create_flex_message("ขณะนี้ระบบไม่สามารถประมวลผลรูปภาพได้ กรุณาสอบถามด้วยข้อความแทนค่ะ 🙏🏻")
+        line_bot_api.reply_message(
+            event.reply_token,
+            [image_reply]
+        )
+
+    # Reply ข้อมูลกลับไปยัง LINE
+    line_bot_api.reply_message(
+        event.reply_token,
+        [reply]
+    )
 
 # Endpoint สำหรับทดสอบ RAG ด้วยข้อความ
 @app.get('/test-message')
