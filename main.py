@@ -19,8 +19,6 @@ from linebot.models import (
     TextComponent,
     ButtonComponent,
     URIAction,
-    ImageComponent,
-    Separator
 )
 from linebot.exceptions import InvalidSignatureError
 from sentence_transformers import SentenceTransformer
@@ -30,8 +28,8 @@ from contextlib import asynccontextmanager
 app = FastAPI()
 
 # ข้อมูล token และ channel secret สำหรับ LINE
-ACCESS_TOKEN = os.getenv("LINE_ACCESS_TOKEN", "YOUR_LINE_ACCESS_TOKEN")
-CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET", "YOUR_LINE_CHANNEL_SECRET")
+ACCESS_TOKEN = os.getenv("LINE_ACCESS_TOKEN", "RMuXBCLD7tGSbkGgdELH7Vz9+Qz0YhqCIeKBhpMdKvOVii7W2L9rNpAHjYGigFN4ORLknMxhuWJYKIX3uLrY1BUg7E3Bk0v3Fmc5ZIC53d8fOdvIMyZQ6EdaOS0a6kejeqcX/dRFI/JfiFJr5mdwZgdB04t89/1O/w1cDnyilFU=")
+CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET", "175149695b4d312eabb9df4b7e3e7a95")
 
 # การเชื่อมต่อ และตั้งค่าข้อมูลเพื่อเรียกใช้งาน LINE Messaging API
 line_bot_api = LineBotApi(ACCESS_TOKEN)
@@ -168,31 +166,23 @@ def get_manual_response(user_message: str) -> str:
     else:
         return None
 
-# ฟังก์ชันสำหรับสร้าง Flex Send Message ที่มี header และข้อความในกล่อง
+# ฟังก์ชันสำหรับสร้าง Flex Send Message ที่มีข้อความในกล่อง พร้อม Header
 def create_flex_message(text: str) -> FlexSendMessage:
     bubble = BubbleContainer(
         direction='ltr',
         header=BoxComponent(
-            layout='horizontal',
+            layout='vertical',
             contents=[
-                ImageComponent(
-                    url='https://i.imgur.com/your-header-icon.png',  # เปลี่ยน URL เป็นไอคอนที่คุณต้องการ
-                    size='xxs',
-                    aspect_ratio='1:1',
-                    aspect_mode='cover',
-                    margin='none'
-                ),
                 TextComponent(
-                    text='ข้อมูลสำคัญ',
+                    text="ข้อมูลสำคัญ",
                     weight='bold',
                     size='lg',
-                    color='#FFFFFF',
-                    margin='md',
-                    flex=5
+                    color='#FFFFFF'
                 )
             ],
+            background_color='#0288D1',  # สีฟ้าเข้มสำหรับ Header
             padding_all='10px',
-            background_color='#1DB446'  # สีพื้นหลังของ header
+            corner_radius='10px 10px 0px 0px'  # มุมโค้งเฉพาะด้านบน
         ),
         body=BoxComponent(
             layout='vertical',
@@ -206,56 +196,33 @@ def create_flex_message(text: str) -> FlexSendMessage:
                 )
             ],
             padding_all='10px',
-            background_color='#F0F0F0',  # สีพื้นหลังของกล่องข้อความ
+            background_color='#FFFFFF',  # สีขาวสำหรับเนื้อหา
             border_width='1px',
             border_color='#CCCCCC',
-            corner_radius='10px'
-        ),
-        footer=BoxComponent(
-            layout='vertical',
-            contents=[
-                Separator(),  # เพิ่มเส้นคั่น
-                ButtonComponent(
-                    style='primary',
-                    action=URIAction(
-                        label='ดูเพิ่มเติม',
-                        uri='https://example.com'  # เปลี่ยน URI เป็นลิงก์ที่ต้องการ
-                    )
-                )
-            ],
-            padding_all='10px',
-            background_color='#FFFFFF'
+            corner_radius='0px 0px 10px 10px'  # มุมโค้งเฉพาะด้านล่าง
         )
     )
     
     return FlexSendMessage(alt_text="Flex Message", contents=bubble)
 
-# ฟังก์ชันสำหรับสร้าง Carousel Flex Send Message ที่มี header
+# ฟังก์ชันสำหรับสร้าง Carousel Flex Send Message พร้อม Header ในแต่ละบับเบิล
 def create_carousel_message() -> FlexSendMessage:
     # บับเบิลแรก
     bubble1 = BubbleContainer(
         direction='ltr',
         header=BoxComponent(
-            layout='horizontal',
+            layout='vertical',
             contents=[
-                ImageComponent(
-                    url='https://i.imgur.com/header-icon1.png',  # เปลี่ยน URL เป็นไอคอนที่คุณต้องการ
-                    size='xxs',
-                    aspect_ratio='1:1',
-                    aspect_mode='cover',
-                    margin='none'
-                ),
                 TextComponent(
-                    text='หัวข้อแรก',
+                    text="ข้อมูลเอกสาร 1",
                     weight='bold',
                     size='lg',
-                    color='#FFFFFF',
-                    margin='md',
-                    flex=5
+                    color='#FFFFFF'
                 )
             ],
+            background_color='#0288D1',
             padding_all='10px',
-            background_color='#1DB446'  # สีพื้นหลังของ header
+            corner_radius='10px 10px 0px 0px'
         ),
         body=BoxComponent(
             layout='vertical',
@@ -268,19 +235,18 @@ def create_carousel_message() -> FlexSendMessage:
                 )
             ],
             padding_all='10px',
-            background_color='#F0F0F0',
+            background_color='#FFFFFF',
             border_width='1px',
             border_color='#CCCCCC',
-            corner_radius='10px'
+            corner_radius='0px 0px 10px 10px'
         ),
         footer=BoxComponent(
-            layout='vertical',
+            layout='horizontal',
             contents=[
-                Separator(),  # เพิ่มเส้นคั่น
                 ButtonComponent(
                     style='primary',
                     action=URIAction(
-                        label='ไปที่เว็บไซต์',
+                        label='Go',
                         uri='https://example.com'
                     )
                 )
@@ -294,26 +260,18 @@ def create_carousel_message() -> FlexSendMessage:
     bubble2 = BubbleContainer(
         direction='ltr',
         header=BoxComponent(
-            layout='horizontal',
+            layout='vertical',
             contents=[
-                ImageComponent(
-                    url='https://i.imgur.com/header-icon2.png',  # เปลี่ยน URL เป็นไอคอนที่คุณต้องการ
-                    size='xxs',
-                    aspect_ratio='1:1',
-                    aspect_mode='cover',
-                    margin='none'
-                ),
                 TextComponent(
-                    text='หัวข้อที่สอง',
+                    text="ข้อมูลเอกสาร 2",
                     weight='bold',
                     size='lg',
-                    color='#FFFFFF',
-                    margin='md',
-                    flex=5
+                    color='#FFFFFF'
                 )
             ],
+            background_color='#0288D1',
             padding_all='10px',
-            background_color='#1DB446'  # สีพื้นหลังของ header
+            corner_radius='10px 10px 0px 0px'
         ),
         body=BoxComponent(
             layout='vertical',
@@ -326,19 +284,18 @@ def create_carousel_message() -> FlexSendMessage:
                 )
             ],
             padding_all='10px',
-            background_color='#F0F0F0',
+            background_color='#FFFFFF',
             border_width='1px',
             border_color='#CCCCCC',
-            corner_radius='10px'
+            corner_radius='0px 0px 10px 10px'
         ),
         footer=BoxComponent(
-            layout='vertical',
+            layout='horizontal',
             contents=[
-                Separator(),  # เพิ่มเส้นคั่น
                 ButtonComponent(
                     style='primary',
                     action=URIAction(
-                        label='ไปที่เว็บไซต์',
+                        label='Go',
                         uri='https://example.com'
                     )
                 )
@@ -403,26 +360,18 @@ def handle_message(event: MessageEvent):
                     bubble = BubbleContainer(
                         direction='ltr',
                         header=BoxComponent(
-                            layout='horizontal',
+                            layout='vertical',
                             contents=[
-                                ImageComponent(
-                                    url='https://i.imgur.com/header-icon.png',  # เปลี่ยน URL เป็นไอคอนที่คุณต้องการ
-                                    size='xxs',
-                                    aspect_ratio='1:1',
-                                    aspect_mode='cover',
-                                    margin='none'
-                                ),
                                 TextComponent(
-                                    text='ข้อมูลสำคัญ',
+                                    text="ข้อมูลเพิ่มเติม",
                                     weight='bold',
                                     size='lg',
-                                    color='#FFFFFF',
-                                    margin='md',
-                                    flex=5
+                                    color='#FFFFFF'
                                 )
                             ],
+                            background_color='#0288D1',
                             padding_all='10px',
-                            background_color='#1DB446'  # สีพื้นหลังของ header
+                            corner_radius='10px 10px 0px 0px'
                         ),
                         body=BoxComponent(
                             layout='vertical',
@@ -435,20 +384,19 @@ def handle_message(event: MessageEvent):
                                 )
                             ],
                             padding_all='10px',
-                            background_color='#F0F0F0',
+                            background_color='#FFFFFF',
                             border_width='1px',
                             border_color='#CCCCCC',
-                            corner_radius='10px'
+                            corner_radius='0px 0px 10px 10px'
                         ),
                         footer=BoxComponent(
-                            layout='vertical',
+                            layout='horizontal',
                             contents=[
-                                Separator(),  # เพิ่มเส้นคั่น
                                 ButtonComponent(
                                     style='primary',
                                     action=URIAction(
-                                        label='ดูเพิ่มเติม',
-                                        uri='https://example.com'  # เปลี่ยน URI ตามเอกสาร
+                                        label='Go',
+                                        uri='https://example.com'  # ปรับปรุง URI ตามเอกสาร
                                     )
                                 )
                             ],
