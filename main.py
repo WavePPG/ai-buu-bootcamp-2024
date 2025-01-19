@@ -7,14 +7,14 @@ import os
 import faiss
 
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Form
-from linebot.v3 import WebhookHandler
-from linebot.v3.messaging import (
+from linebot import WebhookHandler
+from linebot.models import (
     Configuration,
     ApiClient,
     MessagingApi,
     ReplyMessageRequest,
     TextMessage,
-    FlexMessage,
+    FlexSendMessage,
     BubbleContainer,
     CarouselContainer,
     BoxComponent,
@@ -22,12 +22,12 @@ from linebot.v3.messaging import (
     ButtonComponent,
     URIAction,
 )
-from linebot.v3.webhooks import (
+from linebot.webhooks import (
     MessageEvent,
     TextMessageContent,
     ImageMessageContent
 )
-from linebot.v3.exceptions import InvalidSignatureError
+from linebot.exceptions import InvalidSignatureError
 from sentence_transformers import SentenceTransformer
 from typing import Dict
 from contextlib import asynccontextmanager
@@ -173,8 +173,8 @@ def get_manual_response(user_message: str) -> str:
     else:
         return None
 
-# ฟังก์ชันสำหรับสร้าง Flex Message ที่มีข้อความในกล่อง
-def create_flex_message(text: str) -> FlexMessage:
+# ฟังก์ชันสำหรับสร้าง Flex Send Message ที่มีข้อความในกล่อง
+def create_flex_message(text: str) -> FlexSendMessage:
     bubble = BubbleContainer(
         direction='ltr',
         body=BoxComponent(
@@ -196,10 +196,10 @@ def create_flex_message(text: str) -> FlexMessage:
         )
     )
     
-    return FlexMessage(alt_text="Flex Message", contents=bubble)
+    return FlexSendMessage(alt_text="Flex Message", contents=bubble)
 
-# ฟังก์ชันสำหรับสร้าง Carousel Flex Message
-def create_carousel_message() -> FlexMessage:
+# ฟังก์ชันสำหรับสร้าง Carousel Flex Send Message
+def create_carousel_message() -> FlexSendMessage:
     # บับเบิลแรก
     bubble1 = BubbleContainer(
         direction='ltr',
@@ -271,8 +271,8 @@ def create_carousel_message() -> FlexMessage:
         contents=[bubble1, bubble2]
     )
 
-    # สร้าง Flex Message ด้วย Carousel
-    return FlexMessage(
+    # สร้าง Flex Send Message ด้วย Carousel
+    return FlexSendMessage(
         alt_text="Carousel Message",
         contents=carousel
     )
@@ -284,7 +284,8 @@ async def message(request: Request):
     signature = request.headers.get('X-Line-Signature')
     if not signature:
         raise HTTPException(
-            status_code=400, detail="X-Line-Signature header is missing")
+            status_code=400, detail="X-Line-Signature header is missing"
+        )
 
     # ข้อมูลที่ส่งมาจาก LINE Platform
     body = await request.body()
@@ -295,7 +296,7 @@ async def message(request: Request):
     except InvalidSignatureError:
         raise HTTPException(status_code=400, detail="Invalid signature")
 
-# ปรับปรุงฟังก์ชัน handle_message เพื่อใช้ Carousel Flex Message
+# ปรับปรุงฟังก์ชัน handle_message เพื่อใช้ Carousel Flex Send Message
 @handler.add(MessageEvent, message=(TextMessageContent, ImageMessageContent))
 def handle_message(event: MessageEvent):
     with ApiClient(configuration) as api_client:
@@ -307,7 +308,7 @@ def handle_message(event: MessageEvent):
             # ตรวจสอบว่าผู้ใช้ต้องการคู่มือการใช้งานหรือไม่
             manual_response = get_manual_response(user_message)
             if manual_response:
-                reply = create_carousel_message()  # ใช้ Carousel Flex Message แทนข้อความธรรมดา
+                reply = create_flex_message(manual_response)  # ใช้ Flex Send Message แบบกล่องเดียว
             else:
                 # การค้นหาข้อมูลจาก RAG
                 retrieved_docs = rag.retrieve_documents(user_message, top_k=3)  # เปลี่ยน top_k เป็น 3
@@ -355,18 +356,16 @@ def handle_message(event: MessageEvent):
                     
                     # สร้าง Carousel ด้วยบับเบิลที่สร้างขึ้น
                     carousel = CarouselContainer(contents=bubbles)
-                    reply = FlexMessage(
+                    reply = FlexSendMessage(
                         alt_text="Carousel Message",
                         contents=carousel
                     )
                 else:
                     default_text = "ขออภัย ฉันไม่เข้าใจคำถามของคุณ กรุณาลองใหม่อีกครั้ง"
-                    reply = create_carousel_message()  # หรือใช้ FlexMessage แบบเดิม
-                    # หรือใช้ FlexMessage แบบบับเบิลเดียว
-                    # reply = create_flex_message(default_text)
+                    reply = create_flex_message(default_text)  # ใช้ Flex Send Message แบบกล่องเดียว
 
             # Reply ข้อมูลกลับไปยัง LINE
-            line_bot_api.reply_message_with_http_info(
+            line_bot_api.reply_message(
                 ReplyMessageRequest(
                     replyToken=event.reply_token,
                     messages=[reply]
@@ -384,10 +383,8 @@ def handle_message(event: MessageEvent):
                 image_data = BytesIO(response.content)
                 image = Image.open(image_data)
             except Exception as e:
-                error_reply = create_carousel_message()  # ใช้ Carousel Flex Message สำหรับข้อผิดพลาด
-                # หรือใช้ FlexMessage แบบบับเบิลเดียว
-                # error_reply = create_flex_message("เกิดข้อผิดพลาด, กรุณาลองใหม่อีกครั้ง🙏🏻")
-                line_bot_api.reply_message_with_http_info(
+                error_reply = create_flex_message("เกิดข้อผิดพลาด, กรุณาลองใหม่อีกครั้ง🙏🏻")
+                line_bot_api.reply_message(
                     ReplyMessageRequest(
                         replyToken=event.reply_token,
                         messages=[error_reply]
@@ -396,10 +393,8 @@ def handle_message(event: MessageEvent):
                 return
 
             if image.size[0] * image.size[1] > 1024 * 1024:
-                size_error_reply = create_carousel_message()  # ใช้ Carousel Flex Message สำหรับข้อผิดพลาดขนาดภาพ
-                # หรือใช้ FlexMessage แบบบับเบิลเดียว
-                # size_error_reply = create_flex_message("ขอโทษครับ ภาพมีขนาดใหญ่เกินไป กรุณาลดขนาดภาพและลองใหม่อีกครั้ง")
-                line_bot_api.reply_message_with_http_info(
+                size_error_reply = create_flex_message("ขอโทษครับ ภาพมีขนาดใหญ่เกินไป กรุณาลดขนาดภาพและลองใหม่อีกครั้ง")
+                line_bot_api.reply_message(
                     ReplyMessageRequest(
                         replyToken=event.reply_token,
                         messages=[size_error_reply]
@@ -409,10 +404,9 @@ def handle_message(event: MessageEvent):
 
             # เนื่องจากเราไม่ใช้ Gemini ในการสร้างคำตอบจากรูปภาพ
             # คุณอาจต้องการเพิ่มฟังก์ชันการประมวลผลภาพเพิ่มเติมเอง
-            # สำหรับตัวอย่างนี้ จะตอบกลับด้วย Carousel Flex Message
-            image_reply = create_carousel_message()  # หรือใช้ FlexMessage แบบบับเบิลเดียว
-            # image_reply = create_flex_message("ขณะนี้ระบบไม่สามารถประมวลผลรูปภาพได้ กรุณาสอบถามด้วยข้อความแทนค่ะ 🙏🏻")
-            line_bot_api.reply_message_with_http_info(
+            # สำหรับตัวอย่างนี้ จะตอบกลับด้วย Flex Send Message แบบกล่องเดียว
+            image_reply = create_flex_message("ขณะนี้ระบบไม่สามารถประมวลผลรูปภาพได้ กรุณาสอบถามด้วยข้อความแทนค่ะ 🙏🏻")
+            line_bot_api.reply_message(
                 ReplyMessageRequest(
                     replyToken=event.reply_token,
                     messages=[image_reply]
