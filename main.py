@@ -135,7 +135,7 @@ def create_flex_message(text: str) -> FlexSendMessage:
     bubble = BubbleContainer(
         header=BoxComponent(
             layout='vertical',
-            backgroundColor='#1eb900',  # เปลี่ยนจาก background เป็น backgroundColor
+            backgroundColor='#1eb900',  # สีเขียวสวยๆ
             paddingAll='20px',
             contents=[
                 TextComponent(
@@ -162,6 +162,7 @@ def create_flex_message(text: str) -> FlexSendMessage:
             contents=[
                 ButtonComponent(
                     style='primary',
+                    color='#1eb900',  # สีปุ่มตรงกับหัวข้อ
                     action=URIAction(
                         type='uri',
                         label='GO MAP',
@@ -178,7 +179,7 @@ def create_carousel_message() -> FlexSendMessage:
     bubble1 = BubbleContainer(
         header=BoxComponent(
             layout='vertical',
-            backgroundColor='#1eb900',  # เปลี่ยนจาก background เป็น backgroundColor
+            backgroundColor='#1eb900',  # สีเขียวสวยๆ
             paddingAll='20px',
             contents=[
                 TextComponent(
@@ -205,6 +206,7 @@ def create_carousel_message() -> FlexSendMessage:
             contents=[
                 ButtonComponent(
                     style='primary',
+                    color='#1eb900',  # สีปุ่มตรงกับหัวข้อ
                     action=URIAction(
                         type='uri',
                         label='GO MAP',
@@ -219,7 +221,7 @@ def create_carousel_message() -> FlexSendMessage:
     bubble2 = BubbleContainer(
         header=BoxComponent(
             layout='vertical',
-            background=BoxBackground(color='#1eb900'),
+            backgroundColor='#1eb900',  # ใช้ backgroundColor เพื่อความสม่ำเสมอ
             paddingAll='20px',
             contents=[
                 TextComponent(
@@ -246,6 +248,7 @@ def create_carousel_message() -> FlexSendMessage:
             contents=[
                 ButtonComponent(
                     style='primary',
+                    color='#1eb900',  # สีปุ่มตรงกับหัวข้อ
                     action=URIAction(
                         type='uri',
                         label='GO MAP',
@@ -289,7 +292,7 @@ def handle_message(event: MessageEvent):
                     bubble = BubbleContainer(
                         header=BoxComponent(
                             layout='vertical',
-                            backgroundColor='#1eb900',  # เปลี่ยนจาก background เป็น backgroundColor
+                            backgroundColor='#1eb900',  # สีเขียวสวยๆ
                             paddingAll='20px',
                             contents=[
                                 TextComponent(
@@ -315,6 +318,7 @@ def handle_message(event: MessageEvent):
                             contents=[
                                 ButtonComponent(
                                     style='primary',
+                                    color='#1eb900',  # สีปุ่มตรงกับหัวข้อ
                                     action=URIAction(
                                         type='uri',
                                         label='GO MAP',
@@ -360,6 +364,7 @@ def handle_message(event: MessageEvent):
             event.reply_token,
             [reply]
         )
+
 @app.get('/test-message')
 async def test_message_rag(text: str):
     """
