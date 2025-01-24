@@ -5,7 +5,7 @@ import uvicorn
 import numpy as np
 import os
 import faiss
-  
+
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Form
 from linebot import LineBotApi, WebhookHandler
 from linebot.models import (
@@ -27,46 +27,13 @@ from contextlib import asynccontextmanager
 
 app = FastAPI()
 
+# ข้อมูล token และ channel secret สำหรับ LINE
 ACCESS_TOKEN = os.getenv("LINE_ACCESS_TOKEN", "RMuXBCLD7tGSbkGgdELH7Vz9+Qz0YhqCIeKBhpMdKvOVii7W2L9rNpAHjYGigFN4ORLknMxhuWJYKIX3uLrY1BUg7E3Bk0v3Fmc5ZIC53d8fOdvIMyZQ6EdaOS0a6kejeqcX/dRFI/JfiFJr5mdwZgdB04t89/1O/w1cDnyilFU=")
 CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET", "175149695b4d312eabb9df4b7e3e7a95")
 
+# การเชื่อมต่อ และตั้งค่าข้อมูลเพื่อเรียกใช้งาน LINE Messaging API
 line_bot_api = LineBotApi(ACCESS_TOKEN)
 handler = WebhookHandler(CHANNEL_SECRET)
-
-EMERGENCY_MANUAL = """🚨 คู่มือฉุกเฉิน WildSafe
-
-📱 ขอความช่วยเหลือ
-• กดปุ่ม Emergency ทันที
-• รับคำแนะนำเร่งด่วน
-
-💬 สอบถามข้อมูล
-• พิมพ์คำถามที่ต้องการความช่วยเหลือ
-• เช่น "เจอช้างป่าทำอย่างไร?"
-
-⚡️ พร้อมช่วยเหลือตลอด 24 ชม."""
-
-WATCH_ELEPHANT_MANUAL = """🐘 พบช้างป่า - คู่มือความปลอดภัย
-
-1. 😌 รักษาสติ ไม่ตื่นตระหนก
-2. 👀 ห้ามสบตาช้าง
-3. 🚶 ถอยห่างช้าๆ อย่างนิ่มนวล
-4. 🌳 หลบหลังต้นไม้/กำแพง
-5. 📞 โทรด่วน: 086-092-6529
-
-⚠️ อย่าวิ่ง อย่าส่งเสียงดัง!"""
-
-CHECK_ELEPHANT_MANUAL = """🔍 ตรวจสอบเส้นทางปลอดภัย
-
-• เช็คจุดพบช้างป่าล่าสุด
-• วางแผนเส้นทางปลอดภัย
-
-📍 กดปุ่ม GO MAP เพื่อดูแผนที่"""
-
-OFFICER_MANUAL = """📞 ติดต่อฉุกเฉิน 24 ชม.
-
-🚑 แจ้งเหตุด่วน: 1669
-🏕️ ศูนย์บริการ: 086-092-6529
-🌲 อุทยานฯ: 086-092-6527"""
 
 class RAGSystem:
     def __init__(self, embedding_model: str = 'all-MiniLM-L6-v2'):
@@ -109,6 +76,7 @@ class RAGSystem:
         }
         self.index = None
 
+# สร้าง Object สำหรับใช้งาน RAG
 rag = RAGSystem()
 
 @asynccontextmanager
@@ -121,6 +89,35 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+# ข้อความคู่มือต่างๆ
+EMERGENCY_MANUAL = """
+คู่มือการใช้งานฟีเจอร์ "Emergency"
+**ฟังก์ชันหลัก:**
+- **คำแนะนำในกรณีฉุกเฉิน**: กดปุ่ม "Emergency" เพื่อรับคำแนะนำในสถานการณ์ฉุกเฉินต่างๆ
+- **ถามตอบกับบอท**: พิมพ์คำถามเกี่ยวกับสถานการณ์ฉุกเฉิน เช่น "ช้างเหยียบรถควรทำยังไง" เพื่อรับคำตอบทันที
+"""
+
+WATCH_ELEPHANT_MANUAL = """
+เมื่อช้างเข้าใกล้ในสถานการณ์ฉุกเฉิน ควรทำตามขั้นตอนดังนี้:
+1. รักษาความสงบ: หลีกเลี่ยงการแสดงอาการตกใจหรือกลัว
+2. หลีกเลี่ยงการสบตา: ไม่มองตาช้างโดยตรง
+3. ค่อยๆ ถอยหลังออก: เคลื่อนไหวอย่างช้าๆ เพื่อสร้างระยะห่าง
+4. หาที่หลบภัย: เข้าไปในที่มีอุปสรรค เช่น ต้นไม้ใหญ่หรือกำแพง
+5. ติดต่อเจ้าหน้าที่: โทรขอความช่วยเหลือทันที โทร **086-092-6529** เป็นหมายเลขโทรศัพท์ของ **ศูนย์บริการนักท่องเที่ยว**
+"""
+
+CHECK_ELEPHANT_MANUAL = """
+ตรวจช้างก่อนเดินทาง!** เช็คความปลอดภัยก่อนออกเดินทางที่นี่ 👉 [คลิกเลย](https://aprlabtop.com/Honey_test/chang_v3.php)
+"""
+
+OFFICER_MANUAL = """
+**ติดต่อเจ้าหน้าที่**
+- **หมายเลขหลัก**: 1669 (บริการฉุกเฉิน 24 ชั่วโมง)
+- **ศูนย์บริการนักท่องเที่ยว**: โทร 086-092-6529
+- **ที่ทำการอุทยานแห่งชาติเขาใหญ่**: โทร 086-092-6527
+"""
+
+# ฟังก์ชันสำหรับตรวจสอบและตอบกลับข้อความคู่มือ
 def get_manual_response(user_message: str) -> str:
     user_message = user_message.strip().lower()
     if user_message in ["emergency", "คู่มือการใช้งาน"]:
@@ -134,66 +131,65 @@ def get_manual_response(user_message: str) -> str:
     else:
         return None
 
-def create_bubble_container(text: str) -> BubbleContainer:
-    return BubbleContainer(
-        size='mega',
-        header=BoxComponent(
-            layout='vertical',
-            backgroundColor='#27AE60',
-            paddingAll='10px',
-            contents=[
-                TextComponent(
-                    text="WildSafe",
-                    weight='bold',
-                    color='#FFFFFF',
-                    size='xl',
-                    align='center'
-                )
-            ]
-        ),
+# ฟังก์ชันสำหรับสร้าง Flex Message แบบกล่องเดียวที่มีปุ่ม GO MAP
+def create_flex_message(text: str) -> FlexSendMessage:
+    bubble = BubbleContainer(
         body=BoxComponent(
             layout='vertical',
-            paddingAll='12px',
-            paddingBottom='0px',
             contents=[
                 TextComponent(
                     text=text,
                     wrap=True,
-                    size='sm'
+                    size='md'
                 )
             ]
         ),
         footer=BoxComponent(
-            layout='vertical',
-            paddingAll='12px',
-            paddingTop='8px',
+            layout='horizontal',
             contents=[
                 ButtonComponent(
-                    style='primary',  # เปลี่ยนจาก 'link' เป็น 'primary'
-                    height='sm',
-                    adjustMode='shrink-to-fit',
+                    style='primary',
                     action=URIAction(
                         label='GO MAP',
                         uri='https://aprlabtop.com/Honey_test/chang_v3.php'
-                    ),
-                    color='#FFFFFF',          # สีข้อความ
-                    backgroundColor='#27AE60' # สีพื้นหลัง (เขียว)
+                    )
                 )
-            ]
-        ),
-        styles={
-            "header": {"backgroundColor": "#27AE60"},
-            "body": {"separator": False},
-            "footer": {"separator": False}
-        }
+            ],
+            justify_content='center'
+        )
     )
-
-def create_flex_message(text: str) -> FlexSendMessage:
-    bubble = create_bubble_container(text)
     return FlexSendMessage(alt_text="WildSafe Message", contents=bubble)
 
+# ฟังก์ชันสำหรับสร้าง Carousel Flex Message
 def create_carousel_message(texts: list) -> FlexSendMessage:
-    bubbles = [create_bubble_container(text) for text in texts]
+    bubbles = []
+    for text in texts:
+        bubble = BubbleContainer(
+            body=BoxComponent(
+                layout='vertical',
+                contents=[
+                    TextComponent(
+                        text=text,
+                        wrap=True,
+                        size='md'
+                    )
+                ]
+            ),
+            footer=BoxComponent(
+                layout='horizontal',
+                contents=[
+                    ButtonComponent(
+                        style='primary',
+                        action=URIAction(
+                            label='GO MAP',
+                            uri='https://aprlabtop.com/Honey_test/chang_v3.php'
+                        )
+                    )
+                ],
+                justify_content='center'
+            )
+        )
+        bubbles.append(bubble)
     carousel = CarouselContainer(contents=bubbles)
     return FlexSendMessage(alt_text="WildSafe Carousel", contents=carousel)
 
@@ -219,7 +215,7 @@ def handle_message(event: MessageEvent):
             reply = create_flex_message(manual_response)
         else:
             retrieved_docs = rag.retrieve_documents(user_message, top_k=3)
-            
+
             if retrieved_docs:
                 texts = ["ดูข้อมูลเพิ่มเติมที่นี่" if "http" in doc else doc for doc in retrieved_docs]
                 reply = create_carousel_message(texts)
@@ -230,7 +226,7 @@ def handle_message(event: MessageEvent):
 • เลือกหัวข้อที่ต้องการความช่วยเหลือ
 • กด GO MAP เพื่อดูแผนที่"""
                 reply = create_flex_message(error_message)
-        
+
         line_bot_api.reply_message(
             event.reply_token,
             [reply]
@@ -267,9 +263,18 @@ def handle_message(event: MessageEvent):
 
 @app.get('/test-message')
 async def test_message_rag(text: str):
+    """
+    Debug message from RAG
+    """
     retrieved_docs = rag.retrieve_documents(text, top_k=1)
-    reply = retrieved_docs[0] if retrieved_docs else "ขออภัย ไม่พบข้อมูลที่คุณต้องการ"
-    return {"answer": reply}
+    if retrieved_docs:
+        reply = retrieved_docs[0]
+    else:
+        reply = "ขออภัย ฉันไม่เข้าใจคำถามของคุณ กรุณาลองใหม่อีกครั้ง"
+
+    return {
+        "answer": reply
+    }
 
 @app.post('/image-query')
 async def image_query(
@@ -279,11 +284,17 @@ async def image_query(
 ):
     if file.size > 1024 * 1024:
         raise HTTPException(status_code=400, detail="Image size too large")
-    
+
+    # อ่านข้อมูลภาพจากไฟล์ที่ส่งมา
     contents = await file.read()
+
+    # เนื่องจากเราไม่ใช้ Gemini ในการประมวลผลภาพ
+    # คุณอาจต้องการเพิ่มฟังก์ชันการประมวลผลภาพเองที่นี่
     return {
-        "message": "🔄 ระบบกำลังพัฒนา ไม่สามารถประมวลผลรูปภาพได้"
+        "message": "ขณะนี้ระบบไม่สามารถประมวลผลรูปภาพได้ กรุณาสอบถามด้วยข้อความแทนค่ะ 🙏🏻"
     }
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", port=8000, host="0.0.0.0")
+    uvicorn.run("main:app",
+                port=8000,
+                host="0.0.0.0")
