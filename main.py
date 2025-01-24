@@ -126,26 +126,23 @@ def get_manual_response(user_message: str) -> str:
     else:
         return None
 
-def create_bubble_container(text: str) -> BubbleContainer:
-    return BubbleContainer(
+def create_flex_message(text: str) -> FlexSendMessage:
+    bubble = BubbleContainer(
         header=BoxComponent(
             layout='vertical',
-            backgroundColor='#27AE60',
-            paddingTop='10px',
-            paddingBottom='10px',
+            background_color='#27AE60',
             contents=[
                 TextComponent(
                     text="WildSafe",
                     weight='bold',
+                    align='center',
                     color='#FFFFFF',
-                    size='xl',
-                    align='center'
+                    size='xl'
                 )
             ]
         ),
         body=BoxComponent(
             layout='vertical',
-            paddingAll='15px',
             contents=[
                 TextComponent(
                     text=text,
@@ -156,26 +153,22 @@ def create_bubble_container(text: str) -> BubbleContainer:
         ),
         footer=BoxComponent(
             layout='vertical',
-            spacing='none',
-            margin='none',
             contents=[
                 ButtonComponent(
-                    style='link',
-                    color='#FFFFFF',
-                    height='sm',
+                    style='primary',
                     action=URIAction(
                         label='GO MAP',
                         uri='https://aprlabtop.com/Honey_test/chang_v3.php'
-                    ),
-                    backgroundColor='#27AE60'
+                    )
                 )
             ]
         ),
         styles={
-            "header": {"backgroundColor": "#27AE60"},
-            "footer": {"separator": False}
+            "header": {"backgroundColor": "#27AE60"}
         }
     )
+    return FlexSendMessage(alt_text="WildSafe Message", contents=bubble)
+
 
 def create_flex_message(text: str) -> FlexSendMessage:
     bubble = create_bubble_container(text)
