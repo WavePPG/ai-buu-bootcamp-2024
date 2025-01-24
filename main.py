@@ -31,9 +31,10 @@ load_dotenv()
 app = FastAPI()
 
 # ข้อมูล token และ channel secret สำหรับ LINE จาก Environment Variables
-ACCESS_TOKEN = os.getenv("LINE_ACCESS_TOKEN")
-CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+# ข้อมูล token และ channel secret สำหรับ LINE จาก Environment Variables
+ACCESS_TOKEN = os.getenv("RMuXBCLD7tGSbkGgdELH7Vz9+Qz0YhqCIeKBhpMdKvOVii7W2L9rNpAHjYGigFN4ORLknMxhuWJYKIX3uLrY1BUg7E3Bk0v3Fmc5ZIC53d8fOdvIMyZQ6EdaOS0a6kejeqcX/dRFI/JfiFJr5mdwZgdB04t89/1O/w1cDnyilFU=")
+CHANNEL_SECRET = os.getenv("175149695b4d312eabb9df4b7e3e7a95")
+GEMINI_API_KEY = os.getenv("AIzaSyBfkFZ8DCBb57CwW8WIwqSbUTB3fyIfw6g")
 
 if not ACCESS_TOKEN or not CHANNEL_SECRET or not GEMINI_API_KEY:
     raise ValueError("Please set the LINE_ACCESS_TOKEN, LINE_CHANNEL_SECRET, and GEMINI_API_KEY environment variables.")
