@@ -5,7 +5,6 @@ import uvicorn
 import numpy as np
 import os
 import faiss
-from dotenv import load_dotenv
 import logging
 
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Form
@@ -27,9 +26,6 @@ from sentence_transformers import SentenceTransformer
 from typing import Dict
 from contextlib import asynccontextmanager
 
-# โหลดตัวแปรสิ่งแวดล้อมจากไฟล์ .env
-load_dotenv()
-
 # กำหนดค่า logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -37,10 +33,10 @@ logger = logging.getLogger(__name__)
 app = FastAPI()
 
 # ข้อมูล token และ channel secret สำหรับ LINE
-ACCESS_TOKEN = os.getenv("LINE_ACCESS_TOKEN")
-CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET")
-Gemini_API_Key = os.getenv("GEMINI_API_KEY")
-Gemini_Endpoint_URL = os.getenv("GEMINI_ENDPOINT_URL")
+ACCESS_TOKEN = "RMuXBCLD7tGSbkGgdELH7Vz9+Qz0YhqCIeKBhpMdKvOVii7W2L9rNpAHjYGigFN4ORLknMxhuWJYKIX3uLrY1BUg7E3Bk0v3Fmc5ZIC53d8fOdvIMyZQ6EdaOS0a6kejeqcX/dRFI/JfiFJr5mdwZgdB04t89/1O/w1cDnyilFU="
+CHANNEL_SECRET = "175149695b4d312eabb9df4b7e3e7a95"
+Gemini_API_Key = "AIzaSyBfkFZ8DCBb57CwW8WIwqSbUTB3fyIfw6g"
+Gemini_Endpoint_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
 
 line_bot_api = LineBotApi(ACCESS_TOKEN)
 handler = WebhookHandler(CHANNEL_SECRET)
@@ -163,16 +159,25 @@ def get_manual_response(user_message: str) -> str:
 
 def get_gemini_response(query: str, api_key: str, endpoint_url: str):
     headers = {
-        "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
-    data = {"query": query}
-    
+    params = {
+        "key": api_key
+    }
+    data = {
+        "contents": [{
+            "parts": [{"text": query}]
+        }]
+    }
+
     try:
-        response = requests.post(endpoint_url, headers=headers, json=data, timeout=10)
+        response = requests.post(endpoint_url, headers=headers, params=params, json=data, timeout=10)
         response.raise_for_status()  # ยกข้อผิดพลาดถ้ามีสถานะไม่ใช่ 200
         response_data = response.json()
-        return response_data.get("response", "ขอโทษค่ะ ฉันไม่สามารถช่วยได้ในขณะนี้")
+        # ตรวจสอบโครงสร้างของการตอบกลับจาก API
+        # สมมติว่า response มีรูปแบบ: {"contents": [{"parts": [{"text": "response text"}]}]}
+        # ปรับให้เข้ากับโครงสร้างจริงของ Gemini API
+        return response_data.get("contents", [{}])[0].get("parts", [{}])[0].get("text", "ขอโทษค่ะ ฉันไม่สามารถช่วยได้ในขณะนี้")
     except requests.exceptions.HTTPError as http_err:
         logger.error(f"HTTP error occurred: {http_err} - Response: {response.text}")
         return f"HTTP error occurred: {http_err}"
