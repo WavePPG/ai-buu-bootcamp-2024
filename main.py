@@ -2,10 +2,10 @@ import requests
 from io import BytesIO
 from PIL import Image
 import uvicorn
+import json
 import numpy as np
 import os
 import faiss
-import logging
 
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Form
 from linebot import LineBotApi, WebhookHandler
@@ -15,112 +15,261 @@ from linebot.models import (
     ImageMessage,
     FlexSendMessage,
     BubbleContainer,
+    CarouselContainer,
     BoxComponent,
     TextComponent,
     ButtonComponent,
     URIAction,
-    CarouselContainer,  # เพิ่มการนำเข้า CarouselContainer
 )
 from linebot.exceptions import InvalidSignatureError
+import google.generativeai as genai
 from sentence_transformers import SentenceTransformer
 from typing import Dict
 from contextlib import asynccontextmanager
 
-# กำหนดค่า logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 app = FastAPI()
 
 # ข้อมูล token และ channel secret สำหรับ LINE
-ACCESS_TOKEN = "RMuXBCLD7tGSbkGgdELH7Vz9+Qz0YhqCIeKBhpMdKvOVii7W2L9rNpAHjYGigFN4ORLknMxhuWJYKIX3uLrY1BUg7E3Bk0v3Fmc5ZIC53d8fOdvIMyZQ6EdaOS0a6kejeqcX/dRFI/JfiFJr5mdwZgdB04t89/1O/w1cDnyilFU="
-CHANNEL_SECRET = "175149695b4d312eabb9df4b7e3e7a95"
-Gemini_API_Key = "AIzaSyBfkFZ8DCBb57CwW8WIwqSbUTB3fyIfw6g"
-Gemini_Endpoint_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
+ACCESS_TOKEN = os.getenv("LINE_ACCESS_TOKEN", "RMuXBCLD7tGSbkGgdELH7Vz9+Qz0YhqCIeKBhpMdKvOVii7W2L9rNpAHjYGigFN4ORLknMxhuWJYKIX3uLrY1BUg7E3Bk0v3Fmc5ZIC53d8fOdvIMyZQ6EdaOS0a6kejeqcX/dRFI/JfiFJr5mdwZgdB04t89/1O/w1cDnyilFU=")
+CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET", "175149695b4d312eabb9df4b7e3e7a95")
+GEMINI_API_KEY = "AIzaSyBfkFZ8DCBb57CwW8WIwqSbUTB3fyIfw6g"
 
 line_bot_api = LineBotApi(ACCESS_TOKEN)
 handler = WebhookHandler(CHANNEL_SECRET)
 
-class RAGSystem:
-    def __init__(self, embedding_model: str = 'all-MiniLM-L6-v2'):
+class GeminiRAGSystem:
+    def __init__(self, 
+                 json_db_path: str, 
+                 gemini_api_key: str, 
+                 embedding_model: str = 'all-MiniLM-L6-v2'):
+        # การเชื่อมต่อ และตั้งค่าข้อมูลเพื่อเรียกใช้งาน Gemini
+        genai.configure(api_key=gemini_api_key)
+        
+        # ประกาศโมเดลที่ใช้งาน
+        self.generation_model = genai.GenerativeModel('gemini-1.5-flash')
+        
+        # ข้อมูล JSON ที่ใช้เก็บข้อมูล
+        self.json_db_path = json_db_path
+        
+        # โมเดลที่ใช้ในการสร้างเวกเตอร์ของข้อความ
         self.embedding_model = SentenceTransformer(embedding_model)
-        self.database = {
-            'documents': [],
-            'embeddings': [],
-            'metadata': []
-        }
+        
+        # Load ฐานข้อมูลจากไฟล์ JSON
+        self.load_database()
+        
+        # สร้าง FAISS index
         self.create_faiss_index()
-
+    
+    def load_database(self):
+        """Load existing database or create new"""
+        try:
+            with open(self.json_db_path, 'r', encoding='utf-8') as f:
+                self.database = json.load(f)
+        except FileNotFoundError:
+            self.database = {
+                'documents': [],
+                'embeddings': [],
+                'metadata': []
+            }
+    
+    def save_database(self):
+        """Save database to JSON file"""
+        with open(self.json_db_path, 'w', encoding='utf-8') as f:
+            json.dump(self.database, f, indent=2, ensure_ascii=False)
+     
     def add_document(self, text: str, metadata: dict = None):
+        """Add document to database with embedding"""
+        # ประมวลผลข้อความเพื่อหาเวกเตอร์ของข้อความ
         embedding = self.embedding_model.encode([text])[0]
+        
+        # เพิ่มข้อมูลลงในฐานข้อมูล
         self.database['documents'].append(text)
         self.database['embeddings'].append(embedding.tolist())
         self.database['metadata'].append(metadata or {})
+        
+        # Save ฐานข้อมูลลงในไฟล์ JSON
+        self.save_database()
         self.create_faiss_index()
-
+    
     def create_faiss_index(self):
+        """Create FAISS index for similarity search"""
         if not self.database['embeddings']:
             self.index = None
             return
+        
+        # แปลงข้อมูลเป็น numpy array
         embeddings = np.array(self.database['embeddings'], dtype='float32')
         dimension = embeddings.shape[1]
-        self.index = faiss.IndexFlatL2(dimension)
-        self.index.add(embeddings)
 
+        # สร้าง FAISS index
+        self.index = faiss.IndexFlatL2(dimension)
+        
+        # เพิ่มข้อมูลลงใน FAISS index
+        self.index.add(embeddings)
+    
     def retrieve_documents(self, query: str, top_k: int = 3):
+        """Retrieve most relevant documents"""
         if not self.database['embeddings'] or self.index is None:
             return []
+        
+        # แปลงข้อความเป็นเวกเตอร์
         query_embedding = self.embedding_model.encode([query]).astype('float32')
+        
+        # ค้นหาเอกสารที่เกี่ยวข้องด้วย similarity search
         D, I = self.index.search(query_embedding, top_k)
+        
         return [self.database['documents'][i] for i in I[0] if i < len(self.database['documents'])]
+    
+    def generate_response(self, query: str):
+        """Generate response using Gemini and retrieved documents"""
+        # Retrieve ข้อมูลจากฐานข้อมูล
+        retrieved_docs = self.retrieve_documents(query)
+        
+        # เตรียมข้อมูลเพื่อใช้ในการสร้างบริบท
+        context = "\n\n".join(retrieved_docs)
+        
+        # สร้าง Prompt เพื่อใช้ในการสร้างคำตอบ
+        full_prompt = f"""You are an AI assistant. 
+Use the following context to answer the question precisely:
 
+Context:
+{context}
+
+Question: {query}
+
+Provide a detailed and informative response based on the context in Thai 
+but if the response is not about the context just ignore and answering in way nat."""
+        
+        # คำตอบจาก Gemini
+        try:
+            response = self.generation_model.generate_content(full_prompt)
+            return response.text, full_prompt
+        except Exception as e:
+            return f"Error generating response: {str(e)}", str(e)
+    
+    def process_image_query(self, 
+                            image_content: bytes, 
+                            query: str,
+                            use_rag: bool = True,
+                            top_k_docs: int = 3) -> Dict:
+        """
+        Process image-based query with optional RAG enhancement
+        
+        Args:
+            image_content (bytes): Content of the image
+            query (str): Query about the image
+            use_rag (bool): Whether to use RAG for context
+            top_k_docs (int): Number of documents to retrieve
+        
+        Returns:
+            Generated response about the image
+        """
+        # เปิดภาพจากข้อมูลที่ส่งมา
+        image = Image.open(BytesIO(image_content))
+
+        # สร้างคำอธิบายของภาพ
+        initial_description = self.generation_model.generate_content(
+            ["Provide a detailed, objective description of this image", image],
+            generation_config={
+                "max_output_tokens": 256,
+                "temperature": 0.4,
+                "top_p": 0.9,
+                "top_k": 8
+            }
+        ).text
+        
+        # สำหรับการใช้งาน RAG 
+        context = ""
+        if use_rag:
+            # นำคำอธิบายภาพไปใช้ในการค้นหาเอกสารที่เกี่ยวข้องใน JSON
+            retrieved_docs = self.retrieve_documents(initial_description, top_k_docs)
+            
+            # นำข้อมูลที่ได้จากการค้นหามาใช้ในการสร้างบริบท
+            context = "\n\n".join(retrieved_docs)
+        
+        # สร้าง Prompt สำหรับการสร้างคำตอบ
+        enhanced_prompt = f"""Image Description:
+{initial_description}
+
+Context from Knowledge Base:
+{context}
+
+User Query: {query}
+
+Based on the image description and the contextual information from our knowledge base, 
+provide a comprehensive and insightful response to the query. 
+If the context does not directly relate to the image, focus on the image description 
+and your visual analysis in Thai."""
+        
+        # สร้างคำตอบจาก Gemini
+        try:
+            response = self.generation_model.generate_content(
+                [enhanced_prompt, image],
+                generation_config={
+                    "max_output_tokens": 256,
+                    "temperature": 0.4,
+                    "top_p": 0.9,
+                    "top_k": 8
+                }
+            )
+            
+            return {
+                "final_response": response.text,
+            }
+        except Exception as e:
+            return {
+                "error": f"Error generating response: {str(e)}",
+                "image_description": initial_description
+            }
+    
     def clear_database(self):
+        """Clear database and save to JSON file"""
         self.database = {
             'documents': [],
             'embeddings': [],
             'metadata': []
         }
-        self.index = None
+        self.save_database()
 
-rag = RAGSystem()
+# สร้าง Object สำหรับใช้งาน Gemini
+gemini = GeminiRAGSystem(
+    json_db_path="gemini_rag_database.json", 
+    gemini_api_key=GEMINI_API_KEY
+)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    sample_documents = []
+    # ข้อมูลตัวอย่างที่ใช้สำหรับ Gemini
+    sample_documents = [
+
+    ]
+    
+    # เพิ่มข้อมูลตัวอย่างลงใน Gemini
     for doc in sample_documents:
-        rag.add_document(doc)
+        gemini.add_document(doc)
+        
     yield
-    rag.clear_database()
+
+    # ลบข้อมูลที่ใช้ในการทดสอบออกจาก Gemini
+    gemini.clear_database()
 
 app = FastAPI(lifespan=lifespan)
 
-# ข้อความคู่มือต่างๆ - เวอร์ชันปรับปรุง
+# Manuals
 EMERGENCY_MANUAL = """
-📱 คู่มือการใช้งาน WildSafe 🦮
+📱 คู่มือการใช้งาน WILDSAFE 🦮
 
 🔸 วิธีใช้งานฉุกเฉิน
    • กดปุ่ม "Emergency" ทันทีเมื่อต้องการความช่วยเหลือ
    • รับคำแนะนำที่เป็นประโยชน์สำหรับสถานการณ์ฉุกเฉิน
-
-🔸 สอบถามข้อมูลด่วน
-   • พิมพ์คำถามที่ต้องการความช่วยเหลือ
-   • เช่น "พบช้างบนถนนต้องทำอย่างไร?"
-   • รับคำตอบและวิธีแก้ไขสถานการณ์ทันที
 """
 
 WATCH_ELEPHANT_MANUAL = """
 🐘 แนวทางปฏิบัติเมื่อพบช้างในระยะใกล้ 🚨
 
 1. 😌 รักษาสติ - ควบคุมอารมณ์ให้สงบ ไม่ตื่นตระหนก
-
 2. 👀 หลีกเลี่ยงการสบตา - อย่าจ้องมองช้างโดยตรง
-
 3. 🚶‍♂️ ถอยออกอย่างช้าๆ - เคลื่อนที่เงียบๆ สร้างระยะห่างที่ปลอดภัย
-
-4. 🌳 หาที่กำบัง - มองหาต้นไม้ใหญ่หรือสิ่งกีดขวางที่แข็งแรง
-
-5. ☎️ แจ้งเจ้าหน้าที่ทันที
-   📞 โทร: 086-092-6529 (ศูนย์บริการนักท่องเที่ยว 24 ชม.)
 """
 
 CHECK_ELEPHANT_MANUAL = """
@@ -128,20 +277,13 @@ CHECK_ELEPHANT_MANUAL = """
 
 🐘 เช็คพื้นที่พบช้างป่าล่าสุด
 👉 คลิกเพื่อดูแผนที่: https://aprlabtop.com/Honey_test/chang_v3.php
-
-⚠️ เพื่อความปลอดภัยของคุณและช้างป่า
 """
 
 OFFICER_MANUAL = """
 📞 ติดต่อขอความช่วยเหลือ 🆘
 
 🚑 เหตุฉุกเฉิน 24 ชม.: 1669
-
-🏕️ ติดต่อเจ้าหน้าที่พื้นที่:
-• ศูนย์บริการนักท่องเที่ยว: 086-092-6529
-• อุทยานแห่งชาติเขาใหญ่: 086-092-6527
-
-⏰ พร้อมให้บริการตลอด 24 ชั่วโมง
+🏕️ ศูนย์บริการนักท่องเที่ยว: 086-092-6529
 """
 
 def get_manual_response(user_message: str) -> str:
@@ -157,70 +299,42 @@ def get_manual_response(user_message: str) -> str:
     else:
         return None
 
-def get_gemini_response(query: str, api_key: str, endpoint_url: str):
-    headers = {
-        "Content-Type": "application/json"
-    }
-    params = {
-        "key": api_key
-    }
-    data = {
-        "contents": [{
-            "parts": [{"text": query}]
-        }]
-    }
-
-    try:
-        response = requests.post(endpoint_url, headers=headers, params=params, json=data, timeout=10)
-        response.raise_for_status()  # ยกข้อผิดพลาดถ้ามีสถานะไม่ใช่ 200
-        response_data = response.json()
-        # ตรวจสอบโครงสร้างของการตอบกลับจาก API
-        # สมมติว่า response มีรูปแบบ: {"contents": [{"parts": [{"text": "response text"}]}]}
-        # ปรับให้เข้ากับโครงสร้างจริงของ Gemini API
-        return response_data.get("contents", [{}])[0].get("parts", [{}])[0].get("text", "ขอโทษค่ะ ฉันไม่สามารถช่วยได้ในขณะนี้")
-    except requests.exceptions.HTTPError as http_err:
-        logger.error(f"HTTP error occurred: {http_err} - Response: {response.text}")
-        return f"HTTP error occurred: {http_err}"
-    except requests.exceptions.ConnectionError as conn_err:
-        logger.error(f"Connection error occurred: {conn_err}")
-        return "เกิดข้อผิดพลาดในการเชื่อมต่อกับ Gemini"
-    except requests.exceptions.Timeout as timeout_err:
-        logger.error(f"Timeout error occurred: {timeout_err}")
-        return "การเชื่อมต่อกับ Gemini ใช้เวลานานเกินไป"
-    except requests.exceptions.RequestException as req_err:
-        logger.error(f"Request exception occurred: {req_err}")
-        return "เกิดข้อผิดพลาดในการเชื่อมต่อกับ Gemini"
-
 def create_bubble_container(text: str) -> BubbleContainer:
     return BubbleContainer(
         header=BoxComponent(
             layout='vertical',
-            contents=[TextComponent(
-                text="WildSafe",
-                weight='bold',
-                align='center',
-                color='#FFFFFF',
-                size='xl'
-            )],
+            contents=[
+                TextComponent(
+                    text="WildSafe",
+                    weight='bold',
+                    align='center',
+                    color='#FFFFFF',
+                    size='xl'
+                )
+            ],
             background_color='#27AE60'
         ),
         body=BoxComponent(
             layout='vertical',
-            contents=[TextComponent(
-                text=text,
-                wrap=True,
-                size='sm'
-            )]
+            contents=[
+                TextComponent(
+                    text=text,
+                    wrap=True,
+                    size='sm'
+                )
+            ]
         ),
         footer=BoxComponent(
             layout='vertical',
-            contents=[ButtonComponent(
-                style='primary',
-                action=URIAction(
-                    label='GO MAP',
-                    uri='https://aprlabtop.com/Honey_test/chang_v3.php'
+            contents=[
+                ButtonComponent(
+                    style='primary',
+                    action=URIAction(
+                        label='GO MAP',
+                        uri='https://aprlabtop.com/Honey_test/chang_v3.php'
+                    )
                 )
-            )]
+            ]
         )
     )
 
@@ -251,11 +365,28 @@ def handle_message(event: MessageEvent):
         user_message = event.message.text
         manual_response = get_manual_response(user_message)
         
-        if not manual_response:
-            manual_response = get_gemini_response(user_message, Gemini_API_Key, Gemini_Endpoint_URL)
-        
-        reply = create_flex_message(manual_response)
-        line_bot_api.reply_message(event.reply_token, [reply])
+        if manual_response:
+            reply = create_flex_message(manual_response)
+        else:
+            # ใช้ Gemini ในการตอบกลับข้อความที่ไม่ใช่คำถามคู่มือ
+            gemini_response, prompt = gemini.generate_response(user_message)
+            
+            if "Error" not in gemini_response:
+                reply = create_flex_message(gemini_response)
+            else:
+                # หากเกิดข้อผิดพลาดในการสร้างคำตอบด้วย Gemini ให้ใช้การตอบกลับเริ่มต้น
+                retrieved_docs = rag.retrieve_documents(user_message, top_k=3)
+                
+                if retrieved_docs:
+                    texts = ["ดูข้อมูลเพิ่มเติมที่นี่" if "http" in doc else doc for doc in retrieved_docs]
+                    reply = create_carousel_message(texts)
+                else:
+                    reply = create_flex_message("ขออภัย ฉันไม่เข้าใจคำถามของคุณ กรุณาลองใหม่อีกครั้ง")
+    
+        line_bot_api.reply_message(
+            event.reply_token,
+            [reply]
+        )
 
     elif isinstance(event.message, ImageMessage):
         try:
@@ -269,7 +400,15 @@ def handle_message(event: MessageEvent):
             if image.size[0] * image.size[1] > 1024 * 1024:
                 message = "ขอโทษครับ ภาพมีขนาดใหญ่เกินไป กรุณาลดขนาดภาพและลองใหม่อีกครั้ง"
             else:
-                message = "ขณะนี้ระบบไม่สามารถประมวลผลรูปภาพได้ กรุณาสอบถามด้วยข้อความแทนค่ะ 🙏🏻"
+                # ส่งข้อมูลภาพไปยัง Gemini เพื่อทำการประมวลผล
+                gemini_response = gemini.process_image_query(
+                    image_content=response.content,
+                    query="อธิบายภาพนี้ให้ละเอียด", 
+                    use_rag=True
+                )
+                # นำข้อมูลที่ได้จาก Gemini มาใช้งาน
+                response_text = gemini_response.get('final_response', "ขออภัย ฉันไม่สามารถประมวลผลรูปภาพได้ในขณะนี้")
+                message = response_text
                 
         except Exception:
             message = "เกิดข้อผิดพลาด, กรุณาลองใหม่อีกครั้ง🙏🏻"
@@ -278,10 +417,16 @@ def handle_message(event: MessageEvent):
         line_bot_api.reply_message(event.reply_token, [reply])
 
 @app.get('/test-message')
-async def test_message_rag(text: str):
-    retrieved_docs = rag.retrieve_documents(text, top_k=1)
-    reply = retrieved_docs[0] if retrieved_docs else "ขออภัย ฉันไม่เข้าใจคำถามของคุณ กรุณาลองใหม่อีกครั้ง"
-    return {"answer": reply}
+async def test_message_gemini(text: str):
+    """
+    Debug message from Gemini
+    """
+    response, prompt = gemini.generate_response(text)
+
+    return {
+        "gemini_answer": response,
+        "full_prompt": prompt
+    }
 
 @app.post('/image-query')
 async def image_query(
@@ -293,9 +438,15 @@ async def image_query(
         raise HTTPException(status_code=400, detail="Image size too large")
     
     contents = await file.read()
-    return {
-        "message": "ขณะนี้ระบบไม่สามารถประมวลผลรูปภาพได้ กรุณาสอบถามด้วยข้อความแทนค่ะ 🙏🏻"
-    }
+    
+    # ส่งข้อมูลภาพไปยัง Gemini เพื่อทำการประมวลผล
+    image_response = gemini.process_image_query(
+        image_content=contents,
+        query=query,
+        use_rag=use_rag
+    )
+    
+    return image_response
 
 if __name__ == "__main__":
     uvicorn.run("main:app", port=8000, host="0.0.0.0")
