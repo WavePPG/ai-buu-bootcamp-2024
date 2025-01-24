@@ -2,32 +2,28 @@ import requests
 from io import BytesIO
 from PIL import Image
 import uvicorn
-import json
 import numpy as np
 import os
 import faiss
-
+  
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Form
-from linebot.v3.api import LineBotApi  # เปลี่ยนการนำเข้าเป็น submodules
-from linebot.v3.webhook import WebhookHandler  # เปลี่ยนการนำเข้าเป็น submodules
-from linebot.v3.models import (
+from linebot import LineBotApi, WebhookHandler
+from linebot.models import (
     MessageEvent,
     TextMessage,
     ImageMessage,
     FlexSendMessage,
     BubbleContainer,
-    CarouselContainer,
     BoxComponent,
     TextComponent,
     ButtonComponent,
     URIAction,
 )
-from linebot.v3.exceptions import InvalidSignatureError  # เปลี่ยนการนำเข้าเป็น submodules
-import google.generativeai as genai
+from linebot.exceptions import InvalidSignatureError
 from sentence_transformers import SentenceTransformer
 from typing import Dict
 from contextlib import asynccontextmanager
-from dotenv import load_dotenv  # แนะนำให้ใช้ dotenv เพื่อโหลด Environment Variables
+from dotenv import load_dotenv  # ใช้ dotenv เพื่อโหลด Environment Variables
 
 # โหลด Environment Variables จากไฟล์ .env
 load_dotenv()
@@ -35,9 +31,9 @@ load_dotenv()
 app = FastAPI()
 
 # ข้อมูล token และ channel secret สำหรับ LINE จาก Environment Variables
-ACCESS_TOKEN = os.getenv("RMuXBCLD7tGSbkGgdELH7Vz9+Qz0YhqCIeKBhpMdKvOVii7W2L9rNpAHjYGigFN4ORLknMxhuWJYKIX3uLrY1BUg7E3Bk0v3Fmc5ZIC53d8fOdvIMyZQ6EdaOS0a6kejeqcX/dRFI/JfiFJr5mdwZgdB04t89/1O/w1cDnyilFU=")
-CHANNEL_SECRET = os.getenv("175149695b4d312eabb9df4b7e3e7a95")
-GEMINI_API_KEY = os.getenv("AIzaSyBfkFZ8DCBb57CwW8WIwqSbUTB3fyIfw6g")
+ACCESS_TOKEN = os.getenv("LINE_ACCESS_TOKEN")
+CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 if not ACCESS_TOKEN or not CHANNEL_SECRET or not GEMINI_API_KEY:
     raise ValueError("Please set the LINE_ACCESS_TOKEN, LINE_CHANNEL_SECRET, and GEMINI_API_KEY environment variables.")
@@ -421,11 +417,6 @@ def handle_message(event: MessageEvent):
                 else:
                     reply = create_flex_message("ขออภัย ฉันไม่เข้าใจคำถามของคุณ กรุณาลองใหม่อีกครั้ง")
 
-    line_bot_api.reply_message(
-        event.reply_token,
-        [reply]
-    )
-
     elif isinstance(event.message, ImageMessage):
         try:
             headers = {"Authorization": f"Bearer {ACCESS_TOKEN}"}
@@ -452,7 +443,11 @@ def handle_message(event: MessageEvent):
             message = "เกิดข้อผิดพลาด, กรุณาลองใหม่อีกครั้ง🙏🏻"
             
         reply = create_flex_message(message)
-        line_bot_api.reply_message(event.reply_token, [reply])
+    
+    line_bot_api.reply_message(
+        event.reply_token,
+        [reply]
+    )
 
 @app.get('/test-message')
 async def test_message_gemini(text: str):
