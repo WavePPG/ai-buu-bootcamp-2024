@@ -8,8 +8,9 @@ import os
 import faiss
 
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Form
-from linebot.v3 import LineBotApi, WebhookHandler  # เปลี่ยนการนำเข้าเป็น v3
-from linebot.v3.models import (  # เปลี่ยนการนำเข้าเป็น v3
+from linebot.v3.api import LineBotApi  # เปลี่ยนการนำเข้าเป็น submodules
+from linebot.v3.webhook import WebhookHandler  # เปลี่ยนการนำเข้าเป็น submodules
+from linebot.v3.models import (
     MessageEvent,
     TextMessage,
     ImageMessage,
@@ -21,7 +22,7 @@ from linebot.v3.models import (  # เปลี่ยนการนำเข้
     ButtonComponent,
     URIAction,
 )
-from linebot.v3.exceptions import InvalidSignatureError  # เปลี่ยนการนำเข้าเป็น v3
+from linebot.v3.exceptions import InvalidSignatureError  # เปลี่ยนการนำเข้าเป็น submodules
 import google.generativeai as genai
 from sentence_transformers import SentenceTransformer
 from typing import Dict
@@ -33,10 +34,10 @@ load_dotenv()
 
 app = FastAPI()
 
-# ข้อมูล token และ channel secret สำหรับ LINE
-ACCESS_TOKEN = os.getenv("LINE_ACCESS_TOKEN", "RMuXBCLD7tGSbkGgdELH7Vz9+Qz0YhqCIeKBhpMdKvOVii7W2L9rNpAHjYGigFN4ORLknMxhuWJYKIX3uLrY1BUg7E3Bk0v3Fmc5ZIC53d8fOdvIMyZQ6EdaOS0a6kejeqcX/dRFI/JfiFJr5mdwZgdB04t89/1O/w1cDnyilFU=")
-CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET", "175149695b4d312eabb9df4b7e3e7a95")
-GEMINI_API_KEY  = "AIzaSyBfkFZ8DCBb57CwW8WIwqSbUTB3fyIfw6g"
+# ข้อมูล token และ channel secret สำหรับ LINE จาก Environment Variables
+ACCESS_TOKEN = os.getenv("RMuXBCLD7tGSbkGgdELH7Vz9+Qz0YhqCIeKBhpMdKvOVii7W2L9rNpAHjYGigFN4ORLknMxhuWJYKIX3uLrY1BUg7E3Bk0v3Fmc5ZIC53d8fOdvIMyZQ6EdaOS0a6kejeqcX/dRFI/JfiFJr5mdwZgdB04t89/1O/w1cDnyilFU=")
+CHANNEL_SECRET = os.getenv("175149695b4d312eabb9df4b7e3e7a95")
+GEMINI_API_KEY = os.getenv("AIzaSyBfkFZ8DCBb57CwW8WIwqSbUTB3fyIfw6g")
 
 if not ACCESS_TOKEN or not CHANNEL_SECRET or not GEMINI_API_KEY:
     raise ValueError("Please set the LINE_ACCESS_TOKEN, LINE_CHANNEL_SECRET, and GEMINI_API_KEY environment variables.")
@@ -419,12 +420,12 @@ def handle_message(event: MessageEvent):
                     reply = create_carousel_message(texts)
                 else:
                     reply = create_flex_message("ขออภัย ฉันไม่เข้าใจคำถามของคุณ กรุณาลองใหม่อีกครั้ง")
-    
-        line_bot_api.reply_message(
-            event.reply_token,
-            [reply]
-        )
-    
+
+    line_bot_api.reply_message(
+        event.reply_token,
+        [reply]
+    )
+
     elif isinstance(event.message, ImageMessage):
         try:
             headers = {"Authorization": f"Bearer {ACCESS_TOKEN}"}
