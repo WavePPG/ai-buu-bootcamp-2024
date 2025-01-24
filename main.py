@@ -128,16 +128,20 @@ def get_manual_response(user_message: str) -> str:
         return OFFICER_MANUAL
     return None
 
+#ไม่มี header เขียว
 def create_flex_message(text: str) -> FlexSendMessage:
     bubble = BubbleContainer(
         header=BoxComponent(
             layout='vertical',
+            backgroundColor='#27AE60',
+            paddingTop='10px',
+            paddingBottom='10px',
             contents=[
                 TextComponent(
-                    text="WILDSAFE",
+                    text="WildSafe",
                     weight='bold',
+                    color='#FFFFFF',
                     size='xl',
-                    color='#000000',
                     align='center'
                 )
             ]
@@ -175,12 +179,15 @@ def create_carousel_message(retrieved_docs: list) -> FlexSendMessage:
         bubble = BubbleContainer(
             header=BoxComponent(
                 layout='vertical',
+                backgroundColor='#27AE60',
+                paddingTop='10px',
+                paddingBottom='10px',
                 contents=[
                     TextComponent(
-                        text="WILDSAFE",
+                        text="WildSafe",
                         weight='bold',
+                        color='#FFFFFF',
                         size='xl',
-                        color='#000000',
                         align='center'
                     )
                 ]
