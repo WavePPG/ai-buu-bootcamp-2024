@@ -27,11 +27,9 @@ from contextlib import asynccontextmanager
 
 app = FastAPI()
 
-# ข้อมูล token และ channel secret สำหรับ LINE
 ACCESS_TOKEN = os.getenv("LINE_ACCESS_TOKEN", "RMuXBCLD7tGSbkGgdELH7Vz9+Qz0YhqCIeKBhpMdKvOVii7W2L9rNpAHjYGigFN4ORLknMxhuWJYKIX3uLrY1BUg7E3Bk0v3Fmc5ZIC53d8fOdvIMyZQ6EdaOS0a6kejeqcX/dRFI/JfiFJr5mdwZgdB04t89/1O/w1cDnyilFU=")
 CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET", "175149695b4d312eabb9df4b7e3e7a95")
 
-# การเชื่อมต่อ และตั้งค่าข้อมูลเพื่อเรียกใช้งาน LINE Messaging API
 line_bot_api = LineBotApi(ACCESS_TOKEN)
 handler = WebhookHandler(CHANNEL_SECRET)
 
@@ -76,7 +74,6 @@ class RAGSystem:
         }
         self.index = None
 
-# สร้าง Object สำหรับใช้งาน RAG
 rag = RAGSystem()
 
 @asynccontextmanager
@@ -89,7 +86,6 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-# ข้อความคู่มือต่างๆ
 EMERGENCY_MANUAL = """
 คู่มือการใช้งานฟีเจอร์ "Emergency"
 **ฟังก์ชันหลัก:**
@@ -117,7 +113,6 @@ OFFICER_MANUAL = """
 - **ที่ทำการอุทยานแห่งชาติเขาใหญ่**: โทร 086-092-6527
 """
 
-# ฟังก์ชันสำหรับตรวจสอบและตอบกลับข้อความคู่มือ
 def get_manual_response(user_message: str) -> str:
     user_message = user_message.strip().lower()
     if user_message in ["emergency", "คู่มือการใช้งาน"]:
@@ -131,119 +126,64 @@ def get_manual_response(user_message: str) -> str:
     else:
         return None
 
-# ฟังก์ชันสำหรับสร้าง Flex Message แบบกล่องเดียว
-def create_flex_message(text: str) -> FlexSendMessage:
-    bubble = BubbleContainer(
+def create_bubble_container(text: str) -> BubbleContainer:
+    return BubbleContainer(
         header=BoxComponent(
             layout='vertical',
+            backgroundColor='#27AE60',
+            paddingTop='10px',
+            paddingBottom='10px',
             contents=[
                 TextComponent(
                     text="WildSafe",
                     weight='bold',
+                    color='#FFFFFF',
+                    size='xl',
                     align='center'
                 )
             ]
         ),
         body=BoxComponent(
             layout='vertical',
+            paddingAll='15px',
             contents=[
                 TextComponent(
                     text=text,
-                    wrap=True
+                    wrap=True,
+                    size='sm'
                 )
             ]
         ),
         footer=BoxComponent(
-            layout='horizontal',
+            layout='vertical',
+            spacing='none',
+            margin='none',
             contents=[
                 ButtonComponent(
-                    style='primary',
+                    style='link',
+                    color='#FFFFFF',
+                    height='sm',
                     action=URIAction(
-                        type='uri',
                         label='GO MAP',
                         uri='https://aprlabtop.com/Honey_test/chang_v3.php'
-                    )
+                    ),
+                    backgroundColor='#27AE60'
                 )
             ]
-        )
+        ),
+        styles={
+            "header": {"backgroundColor": "#27AE60"},
+            "footer": {"separator": False}
+        }
     )
+
+def create_flex_message(text: str) -> FlexSendMessage:
+    bubble = create_bubble_container(text)
     return FlexSendMessage(alt_text="WildSafe Message", contents=bubble)
 
-# ฟังก์ชันสำหรับสร้าง Carousel Message
-def create_carousel_message() -> FlexSendMessage:
-    # บับเบิลแรก
-    bubble1 = BubbleContainer(
-        header=BoxComponent(
-            layout='vertical',
-            contents=[
-                TextComponent(
-                    text="WildSafe",
-                    weight='bold',
-                    align='center'
-                )
-            ]
-        ),
-        body=BoxComponent(
-            layout='horizontal',
-            contents=[
-                TextComponent(
-                    text="Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-                    wrap=True
-                )
-            ]
-        ),
-        footer=BoxComponent(
-            layout='horizontal',
-            contents=[
-                ButtonComponent(
-                    style='primary',
-                    action=URIAction(
-                        type='uri',
-                        label='GO MAP',
-                        uri='https://aprlabtop.com/Honey_test/chang_v3.php'
-                    )
-                )
-            ]
-        )
-    )
-
-    # บับเบิลที่สอง
-    bubble2 = BubbleContainer(
-        header=BoxComponent(
-            layout='vertical',
-            contents=[
-                TextComponent(
-                    text="WildSafe",
-                    weight='bold',
-                    align='center'
-                )
-            ]
-        ),
-        body=BoxComponent(
-            layout='horizontal',
-            contents=[
-                TextComponent(
-                    text="Hello, World!",
-                    wrap=True
-                )
-            ]
-        ),
-        footer=BoxComponent(
-            layout='horizontal',
-            contents=[
-                ButtonComponent(
-                    style='primary',
-                    action=URIAction(
-                        type='uri',
-                        label='GO MAP',
-                        uri='https://aprlabtop.com/Honey_test/chang_v3.php'
-                    )
-                )
-            ]
-        )
-    )
-
-    carousel = CarouselContainer(contents=[bubble1, bubble2])
+def create_carousel_message(texts: list) -> FlexSendMessage:
+    bubbles = [create_bubble_container(text) for text in texts]
+    carousel = CarouselContainer(contents=bubbles)
     return FlexSendMessage(alt_text="WildSafe Carousel", contents=carousel)
 
 @app.post('/message')
@@ -268,52 +208,10 @@ def handle_message(event: MessageEvent):
             reply = create_flex_message(manual_response)
         else:
             retrieved_docs = rag.retrieve_documents(user_message, top_k=3)
-
+            
             if retrieved_docs:
-                bubbles = []
-                for doc in retrieved_docs:
-                    text = "ดูข้อมูลเพิ่มเติมที่นี่" if "http" in doc else doc
-                    bubble = BubbleContainer(
-                        header=BoxComponent(
-                            layout='vertical',
-                            contents=[
-                                TextComponent(
-                                    text="WildSafe",
-                                    weight='bold',
-                                    align='center'
-                                )
-                            ]
-                        ),
-                        body=BoxComponent(
-                            layout='horizontal',
-                            contents=[
-                                TextComponent(
-                                    text=text,
-                                    wrap=True
-                                )
-                            ]
-                        ),
-                        footer=BoxComponent(
-                            layout='horizontal',
-                            contents=[
-                                ButtonComponent(
-                                    style='primary',
-                                    action=URIAction(
-                                        type='uri',
-                                        label='GO MAP',
-                                        uri='https://aprlabtop.com/Honey_test/chang_v3.php'
-                                    )
-                                )
-                            ]
-                        )
-                    )
-                    bubbles.append(bubble)
-                
-                carousel = CarouselContainer(contents=bubbles)
-                reply = FlexSendMessage(
-                    alt_text="WildSafe Carousel",
-                    contents=carousel
-                )
+                texts = ["ดูข้อมูลเพิ่มเติมที่นี่" if "http" in doc else doc for doc in retrieved_docs]
+                reply = create_carousel_message(texts)
             else:
                 reply = create_flex_message("ขออภัย ฉันไม่เข้าใจคำถามของคุณ กรุณาลองใหม่อีกครั้ง")
 
@@ -332,31 +230,21 @@ def handle_message(event: MessageEvent):
             image = Image.open(image_data)
             
             if image.size[0] * image.size[1] > 1024 * 1024:
-                reply = create_flex_message("ขอโทษครับ ภาพมีขนาดใหญ่เกินไป กรุณาลดขนาดภาพและลองใหม่อีกครั้ง")
+                message = "ขอโทษครับ ภาพมีขนาดใหญ่เกินไป กรุณาลดขนาดภาพและลองใหม่อีกครั้ง"
             else:
-                reply = create_flex_message("ขณะนี้ระบบไม่สามารถประมวลผลรูปภาพได้ กรุณาสอบถามด้วยข้อความแทนค่ะ 🙏🏻")
+                message = "ขณะนี้ระบบไม่สามารถประมวลผลรูปภาพได้ กรุณาสอบถามด้วยข้อความแทนค่ะ 🙏🏻"
                 
-        except Exception as e:
-            reply = create_flex_message("เกิดข้อผิดพลาด, กรุณาลองใหม่อีกครั้ง🙏🏻")
+        except Exception:
+            message = "เกิดข้อผิดพลาด, กรุณาลองใหม่อีกครั้ง🙏🏻"
             
-        line_bot_api.reply_message(
-            event.reply_token,
-            [reply]
-        )
+        reply = create_flex_message(message)
+        line_bot_api.reply_message(event.reply_token, [reply])
+
 @app.get('/test-message')
 async def test_message_rag(text: str):
-    """
-    Debug message from RAG
-    """
     retrieved_docs = rag.retrieve_documents(text, top_k=1)
-    if retrieved_docs:
-        reply = retrieved_docs[0]
-    else:
-        reply = "ขออภัย ฉันไม่เข้าใจคำถามของคุณ กรุณาลองใหม่อีกครั้ง"
-
-    return {
-        "answer": reply
-    }
+    reply = retrieved_docs[0] if retrieved_docs else "ขออภัย ฉันไม่เข้าใจคำถามของคุณ กรุณาลองใหม่อีกครั้ง"
+    return {"answer": reply}
 
 @app.post('/image-query')
 async def image_query(
@@ -366,17 +254,11 @@ async def image_query(
 ):
     if file.size > 1024 * 1024:
         raise HTTPException(status_code=400, detail="Image size too large")
-
-    # อ่านข้อมูลภาพจากไฟล์ที่ส่งมา
+    
     contents = await file.read()
-
-    # เนื่องจากเราไม่ใช้ Gemini ในการประมวลผลภาพ
-    # คุณอาจต้องการเพิ่มฟังก์ชันการประมวลผลภาพเองที่นี่
     return {
         "message": "ขณะนี้ระบบไม่สามารถประมวลผลรูปภาพได้ กรุณาสอบถามด้วยข้อความแทนค่ะ 🙏🏻"
     }
 
 if __name__ == "__main__":
-    uvicorn.run("main:app",
-                port=8000,
-                host="0.0.0.0")
+    uvicorn.run("main:app", port=8000, host="0.0.0.0")
