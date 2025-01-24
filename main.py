@@ -126,7 +126,6 @@ def get_manual_response(user_message: str) -> str:
     else:
         return None
 
-
 def create_bubble_container(text: str) -> BubbleContainer:
     return BubbleContainer(
         header=BoxComponent(
@@ -156,20 +155,27 @@ def create_bubble_container(text: str) -> BubbleContainer:
             ]
         ),
         footer=BoxComponent(
-            layout='horizontal',
+            layout='vertical',
+            spacing='none',
+            margin='none',
             contents=[
                 ButtonComponent(
-                    style='primary',
+                    style='link',
+                    color='#FFFFFF',
+                    height='sm',
                     action=URIAction(
-                        type='uri',
                         label='GO MAP',
                         uri='https://aprlabtop.com/Honey_test/chang_v3.php'
-                    )
+                    ),
+                    backgroundColor='#27AE60'
                 )
             ]
-        )
+        ),
+        styles={
+            "header": {"backgroundColor": "#27AE60"},
+            "footer": {"separator": False}
+        }
     )
-
 
 def create_flex_message(text: str) -> FlexSendMessage:
     bubble = create_bubble_container(text)
