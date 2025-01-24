@@ -25,11 +25,11 @@ from sentence_transformers import SentenceTransformer
 from typing import Dict
 from contextlib import asynccontextmanager
 
-# Constants
+app = FastAPI()
+
 ACCESS_TOKEN = os.getenv("LINE_ACCESS_TOKEN", "RMuXBCLD7tGSbkGgdELH7Vz9+Qz0YhqCIeKBhpMdKvOVii7W2L9rNpAHjYGigFN4ORLknMxhuWJYKIX3uLrY1BUg7E3Bk0v3Fmc5ZIC53d8fOdvIMyZQ6EdaOS0a6kejeqcX/dRFI/JfiFJr5mdwZgdB04t89/1O/w1cDnyilFU=")
 CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET", "175149695b4d312eabb9df4b7e3e7a95")
 
-# LINE API Setup
 line_bot_api = LineBotApi(ACCESS_TOKEN)
 handler = WebhookHandler(CHANNEL_SECRET)
 
@@ -74,47 +74,44 @@ class RAGSystem:
         }
         self.index = None
 
-# Manuals
-EMERGENCY_MANUAL = """
-📱 คู่มือการใช้งาน WILDSAFE 🦮
-
-🔸 วิธีใช้งานฉุกเฉิน
-   • กดปุ่ม "Emergency" ทันทีเมื่อต้องการความช่วยเหลือ
-   • รับคำแนะนำที่เป็นประโยชน์สำหรับสถานการณ์ฉุกเฉิน
-"""
-
-WATCH_ELEPHANT_MANUAL = """
-🐘 แนวทางปฏิบัติเมื่อพบช้างในระยะใกล้ 🚨
-
-1. 😌 รักษาสติ - ควบคุมอารมณ์ให้สงบ ไม่ตื่นตระหนก
-2. 👀 หลีกเลี่ยงการสบตา - อย่าจ้องมองช้างโดยตรง
-3. 🚶‍♂️ ถอยออกอย่างช้าๆ - เคลื่อนที่เงียบๆ สร้างระยะห่างที่ปลอดภัย
-"""
-
-CHECK_ELEPHANT_MANUAL = """
-🔍 ตรวจสอบเส้นทางก่อนเดินทาง!
-
-🐘 เช็คพื้นที่พบช้างป่าล่าสุด
-👉 คลิกเพื่อดูแผนที่: https://aprlabtop.com/Honey_test/chang_v3.php
-"""
-
-OFFICER_MANUAL = """
-📞 ติดต่อขอความช่วยเหลือ 🆘
-
-🚑 เหตุฉุกเฉิน 24 ชม.: 1669
-🏕️ ศูนย์บริการนักท่องเที่ยว: 086-092-6529
-"""
-
-# RAG System Initialization
 rag = RAGSystem()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Add initial documents if needed
+    sample_documents = []
+    for doc in sample_documents:
+        rag.add_document(doc)
     yield
     rag.clear_database()
 
 app = FastAPI(lifespan=lifespan)
+
+EMERGENCY_MANUAL = """
+คู่มือการใช้งานฟีเจอร์ "Emergency"
+**ฟังก์ชันหลัก:**
+- **คำแนะนำในกรณีฉุกเฉิน**: กดปุ่ม "Emergency" เพื่อรับคำแนะนำในสถานการณ์ฉุกเฉินต่างๆ
+- **ถามตอบกับบอท**: พิมพ์คำถามเกี่ยวกับสถานการณ์ฉุกเฉิน เช่น "ช้างเหยียบรถควรทำยังไง" เพื่อรับคำตอบทันที
+"""
+
+WATCH_ELEPHANT_MANUAL = """
+เมื่อช้างเข้าใกล้ในสถานการณ์ฉุกเฉิน ควรทำตามขั้นตอนดังนี้:
+1. รักษาความสงบ: หลีกเลี่ยงการแสดงอาการตกใจหรือกลัว
+2. หลีกเลี่ยงการสบตา: ไม่มองตาช้างโดยตรง
+3. ค่อยๆ ถอยหลังออก: เคลื่อนไหวอย่างช้าๆ เพื่อสร้างระยะห่าง
+4. หาที่หลบภัย: เข้าไปในที่มีอุปสรรค เช่น ต้นไม้ใหญ่หรือกำแพง
+5. ติดต่อเจ้าหน้าที่: โทรขอความช่วยเหลือทันที โทร **086-092-6529** เป็นหมายเลขโทรศัพท์ของ **ศูนย์บริการนักท่องเที่ยว**
+"""
+
+CHECK_ELEPHANT_MANUAL = """
+ตรวจช้างก่อนเดินทาง!** เช็คความปลอดภัยก่อนออกเดินทางที่นี่ 👉 [คลิกเลย](https://aprlabtop.com/Honey_test/chang_v3.php)
+"""
+
+OFFICER_MANUAL = """
+**ติดต่อเจ้าหน้าที่**
+- **หมายเลขหลัก**: 1669 (บริการฉุกเฉิน 24 ชั่วโมง)
+- **ศูนย์บริการนักท่องเที่ยว**: โทร 086-092-6529
+- **ที่ทำการอุทยานแห่งชาติเขาใหญ่**: โทร 086-092-6527
+"""
 
 def get_manual_response(user_message: str) -> str:
     user_message = user_message.strip().lower()
@@ -126,11 +123,12 @@ def get_manual_response(user_message: str) -> str:
         return CHECK_ELEPHANT_MANUAL
     elif user_message in ["ติดต่อเจ้าหน้าที่", "contact officer"]:
         return OFFICER_MANUAL
-    return None
+    else:
+        return None
 
-#ไม่มี header เขียว
-def create_flex_message(text: str) -> FlexSendMessage:
-    bubble = BubbleContainer(
+
+def create_bubble_container(text: str) -> BubbleContainer:
+    return BubbleContainer(
         header=BoxComponent(
             layout='vertical',
             backgroundColor='#27AE60',
@@ -148,12 +146,12 @@ def create_flex_message(text: str) -> FlexSendMessage:
         ),
         body=BoxComponent(
             layout='vertical',
+            paddingAll='15px',
             contents=[
                 TextComponent(
                     text=text,
                     wrap=True,
-                    align='center',
-                    margin='md'
+                    size='sm'
                 )
             ]
         ),
@@ -171,56 +169,16 @@ def create_flex_message(text: str) -> FlexSendMessage:
             ]
         )
     )
-    return FlexSendMessage(alt_text="WILDSAFE Message", contents=bubble)
 
-def create_carousel_message(retrieved_docs: list) -> FlexSendMessage:
-    bubbles = []
-    for doc in retrieved_docs:
-        bubble = BubbleContainer(
-            header=BoxComponent(
-                layout='vertical',
-                backgroundColor='#27AE60',
-                paddingTop='10px',
-                paddingBottom='10px',
-                contents=[
-                    TextComponent(
-                        text="WildSafe",
-                        weight='bold',
-                        color='#FFFFFF',
-                        size='xl',
-                        align='center'
-                    )
-                ]
-            ),
-            body=BoxComponent(
-                layout='vertical',
-                contents=[
-                    TextComponent(
-                        text=doc,
-                        wrap=True,
-                        align='center',
-                        margin='md'
-                    )
-                ]
-            ),
-            footer=BoxComponent(
-                layout='horizontal',
-                contents=[
-                    ButtonComponent(
-                        style='primary',
-                        action=URIAction(
-                            type='uri',
-                            label='GO MAP',
-                            uri='https://aprlabtop.com/Honey_test/chang_v3.php'
-                        )
-                    )
-                ]
-            )
-        )
-        bubbles.append(bubble)
-    
+
+def create_flex_message(text: str) -> FlexSendMessage:
+    bubble = create_bubble_container(text)
+    return FlexSendMessage(alt_text="WildSafe Message", contents=bubble)
+
+def create_carousel_message(texts: list) -> FlexSendMessage:
+    bubbles = [create_bubble_container(text) for text in texts]
     carousel = CarouselContainer(contents=bubbles)
-    return FlexSendMessage(alt_text="WILDSAFE Carousel", contents=carousel)
+    return FlexSendMessage(alt_text="WildSafe Carousel", contents=carousel)
 
 @app.post('/message')
 async def message(request: Request):
@@ -244,9 +202,10 @@ def handle_message(event: MessageEvent):
             reply = create_flex_message(manual_response)
         else:
             retrieved_docs = rag.retrieve_documents(user_message, top_k=3)
-
+            
             if retrieved_docs:
-                reply = create_carousel_message(retrieved_docs)
+                texts = ["ดูข้อมูลเพิ่มเติมที่นี่" if "http" in doc else doc for doc in retrieved_docs]
+                reply = create_carousel_message(texts)
             else:
                 reply = create_flex_message("ขออภัย ฉันไม่เข้าใจคำถามของคุณ กรุณาลองใหม่อีกครั้ง")
 
@@ -265,26 +224,20 @@ def handle_message(event: MessageEvent):
             image = Image.open(image_data)
             
             if image.size[0] * image.size[1] > 1024 * 1024:
-                reply = create_flex_message("ขอโทษครับ ภาพมีขนาดใหญ่เกินไป กรุณาลดขนาดภาพและลองใหม่อีกครั้ง")
+                message = "ขอโทษครับ ภาพมีขนาดใหญ่เกินไป กรุณาลดขนาดภาพและลองใหม่อีกครั้ง"
             else:
-                reply = create_flex_message("ขณะนี้ระบบไม่สามารถประมวลผลรูปภาพได้ กรุณาสอบถามด้วยข้อความแทนค่ะ 🙏🏻")
+                message = "ขณะนี้ระบบไม่สามารถประมวลผลรูปภาพได้ กรุณาสอบถามด้วยข้อความแทนค่ะ 🙏🏻"
                 
-        except Exception as e:
-            reply = create_flex_message("เกิดข้อผิดพลาด, กรุณาลองใหม่อีกครั้ง🙏🏻")
+        except Exception:
+            message = "เกิดข้อผิดพลาด, กรุณาลองใหม่อีกครั้ง🙏🏻"
             
-        line_bot_api.reply_message(
-            event.reply_token,
-            [reply]
-        )
+        reply = create_flex_message(message)
+        line_bot_api.reply_message(event.reply_token, [reply])
 
 @app.get('/test-message')
 async def test_message_rag(text: str):
     retrieved_docs = rag.retrieve_documents(text, top_k=1)
-    if retrieved_docs:
-        reply = retrieved_docs[0]
-    else:
-        reply = "ขออภัย ฉันไม่เข้าใจคำถามของคุณ กรุณาลองใหม่อีกครั้ง"
-
+    reply = retrieved_docs[0] if retrieved_docs else "ขออภัย ฉันไม่เข้าใจคำถามของคุณ กรุณาลองใหม่อีกครั้ง"
     return {"answer": reply}
 
 @app.post('/image-query')
@@ -295,7 +248,8 @@ async def image_query(
 ):
     if file.size > 1024 * 1024:
         raise HTTPException(status_code=400, detail="Image size too large")
-
+    
+    contents = await file.read()
     return {
         "message": "ขณะนี้ระบบไม่สามารถประมวลผลรูปภาพได้ กรุณาสอบถามด้วยข้อความแทนค่ะ 🙏🏻"
     }
