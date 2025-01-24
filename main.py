@@ -32,7 +32,7 @@ app = FastAPI()
 # ข้อมูล token และ channel secret สำหรับ LINE
 ACCESS_TOKEN = os.getenv("LINE_ACCESS_TOKEN", "RMuXBCLD7tGSbkGgdELH7Vz9+Qz0YhqCIeKBhpMdKvOVii7W2L9rNpAHjYGigFN4ORLknMxhuWJYKIX3uLrY1BUg7E3Bk0v3Fmc5ZIC53d8fOdvIMyZQ6EdaOS0a6kejeqcX/dRFI/JfiFJr5mdwZgdB04t89/1O/w1cDnyilFU=")
 CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET", "175149695b4d312eabb9df4b7e3e7a95")
-GEMINI_API_KEY = "AIzaSyBfkFZ8DCBb57CwW8WIwqSbUTB3fyIfw6g"
+Gemini_API_Key = "AIzaSyBfkFZ8DCBb57CwW8WIwqSbUTB3fyIfw6g"
 
 line_bot_api = LineBotApi(ACCESS_TOKEN)
 handler = WebhookHandler(CHANNEL_SECRET)
@@ -138,7 +138,7 @@ Context:
 Question: {query}
 
 Provide a detailed and informative response based on the context in Thai 
-but if the response is not about the context just ignore and answering in way nat."""
+but if the response is not about the context just ignore and answer in a natural way."""
         
         # คำตอบจาก Gemini
         try:
@@ -146,6 +146,28 @@ but if the response is not about the context just ignore and answering in way na
             return response.text, full_prompt
         except Exception as e:
             return f"Error generating response: {str(e)}", str(e)
+    
+    def generate_concise_response(self, query: str):
+        """Generate a concise response using Gemini without RAG context"""
+        # สร้าง Prompt สำหรับการตอบคำถามโดยไม่ใช้บริบทจาก RAG
+        concise_prompt = f"""You are an AI assistant. 
+Provide a concise and to-the-point answer to the following question in Thai:
+
+Question: {query}"""
+        
+        try:
+            response = self.generation_model.generate_content(
+                concise_prompt,
+                generation_config={
+                    "max_output_tokens": 100,  # จำกัดความยาวของคำตอบ
+                    "temperature": 0.5,
+                    "top_p": 0.9,
+                    "top_k": 40
+                }
+            )
+            return response.text
+        except Exception as e:
+            return f"Error generating response: {str(e)}"
     
     def process_image_query(self, 
                             image_content: bytes, 
@@ -241,7 +263,7 @@ gemini = GeminiRAGSystem(
 async def lifespan(app: FastAPI):
     # ข้อมูลตัวอย่างที่ใช้สำหรับ Gemini
     sample_documents = [
-
+        # เพิ่มเอกสารตัวอย่างที่ต้องการ
     ]
     
     # เพิ่มข้อมูลตัวอย่างลงใน Gemini
@@ -288,6 +310,8 @@ OFFICER_MANUAL = """
 
 def get_manual_response(user_message: str) -> str:
     user_message = user_message.strip().lower()
+    
+    # ตรวจสอบคำถามทั่วไป
     if user_message in ["emergency", "คู่มือการใช้งาน"]:
         return EMERGENCY_MANUAL
     elif user_message in ["emergency เกิดเหตุฉุกเฉินทำยังไง", "มีเหตุร้ายใกล้ตัว"]:
@@ -296,8 +320,13 @@ def get_manual_response(user_message: str) -> str:
         return CHECK_ELEPHANT_MANUAL
     elif user_message in ["ติดต่อเจ้าหน้าที่", "contact officer"]:
         return OFFICER_MANUAL
-    else:
-        return None
+    
+    # เพิ่มการจับคีย์เวิร์ดสำหรับคำถามเกี่ยวกับช้าง
+    elephant_keywords = ['ช้าง', 'พบช้าง', 'เจอช้าง', 'วิธีจัดการกับช้าง']
+    if any(keyword in user_message for keyword in elephant_keywords):
+        return WATCH_ELEPHANT_MANUAL
+    
+    return None
 
 def create_bubble_container(text: str) -> BubbleContainer:
     return BubbleContainer(
@@ -366,16 +395,17 @@ def handle_message(event: MessageEvent):
         manual_response = get_manual_response(user_message)
         
         if manual_response:
+            # ถ้าคำถามเป็นคำถามที่เตรียมไว้ล่วงหน้า ใช้ข้อความจาก manual
             reply = create_flex_message(manual_response)
         else:
-            # ใช้ Gemini ในการตอบกลับข้อความที่ไม่ใช่คำถามคู่มือ
-            gemini_response, prompt = gemini.generate_response(user_message)
+            # ถ้าไม่ใช่คำถามที่เตรียมไว้ ให้ใช้ Gemini ตอบกระชับ
+            gemini_response = gemini.generate_concise_response(user_message)
             
             if "Error" not in gemini_response:
                 reply = create_flex_message(gemini_response)
             else:
                 # หากเกิดข้อผิดพลาดในการสร้างคำตอบด้วย Gemini ให้ใช้การตอบกลับเริ่มต้น
-                retrieved_docs = rag.retrieve_documents(user_message, top_k=3)
+                retrieved_docs = gemini.retrieve_documents(user_message, top_k=3)
                 
                 if retrieved_docs:
                     texts = ["ดูข้อมูลเพิ่มเติมที่นี่" if "http" in doc else doc for doc in retrieved_docs]
@@ -387,7 +417,7 @@ def handle_message(event: MessageEvent):
             event.reply_token,
             [reply]
         )
-
+    
     elif isinstance(event.message, ImageMessage):
         try:
             headers = {"Authorization": f"Bearer {ACCESS_TOKEN}"}
