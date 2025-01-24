@@ -3,9 +3,8 @@ from io import BytesIO
 from PIL import Image
 import uvicorn
 import numpy as np
-import os
 import faiss
-  
+
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Form
 from linebot import LineBotApi, WebhookHandler
 from linebot.models import (
@@ -18,24 +17,24 @@ from linebot.models import (
     TextComponent,
     ButtonComponent,
     URIAction,
+    CarouselContainer
 )
 from linebot.exceptions import InvalidSignatureError
 from sentence_transformers import SentenceTransformer
 from typing import Dict
 from contextlib import asynccontextmanager
-from dotenv import load_dotenv  # ใช้ dotenv เพื่อโหลด Environment Variables
 
-# โหลด Environment Variables จากไฟล์ .env
-load_dotenv()
+# ไม่จำเป็นต้องใช้ dotenv แล้ว เพราะจะไม่โหลดจาก .env
+# from dotenv import load_dotenv  
 
 app = FastAPI()
 
-# ข้อมูล token และ channel secret สำหรับ LINE จาก Environment Variables
-# ข้อมูล token และ channel secret สำหรับ LINE จาก Environment Variables
-ACCESS_TOKEN = os.getenv("RMuXBCLD7tGSbkGgdELH7Vz9+Qz0YhqCIeKBhpMdKvOVii7W2L9rNpAHjYGigFN4ORLknMxhuWJYKIX3uLrY1BUg7E3Bk0v3Fmc5ZIC53d8fOdvIMyZQ6EdaOS0a6kejeqcX/dRFI/JfiFJr5mdwZgdB04t89/1O/w1cDnyilFU=")
-CHANNEL_SECRET = os.getenv("175149695b4d312eabb9df4b7e3e7a95")
-GEMINI_API_KEY = os.getenv("AIzaSyBfkFZ8DCBb57CwW8WIwqSbUTB3fyIfw6g")
+# กำหนดค่าตัวแปรโดยตรงแทนการใช้ os.getenv
+ACCESS_TOKEN = "RMuXBCLD7tGSbkGgdELH7Vz9+Qz0YhqCIeKBhpMdKvOVii7W2L9rNpAHjYGigFN4ORLknMxhuWJYKIX3uLrY1BUg7E3Bk0v3Fmc5ZIC53d8fOdvIMyZQ6EdaOS0a6kejeqcX/dRFI/JfiFJr5mdwZgdB04t89/1O/w1cDnyilFU="
+CHANNEL_SECRET = "175149695b4d312eabb9df4b7e3e7a95"
+GEMINI_API_KEY = "AIzaSyBfkFZ8DCBb57CwW8WIwqSbUTB3fyIfw6g"
 
+# ตรวจสอบว่าตัวแปรถูกกำหนดค่าไว้แล้ว
 if not ACCESS_TOKEN or not CHANNEL_SECRET or not GEMINI_API_KEY:
     raise ValueError("Please set the LINE_ACCESS_TOKEN, LINE_CHANNEL_SECRET, and GEMINI_API_KEY environment variables.")
 
