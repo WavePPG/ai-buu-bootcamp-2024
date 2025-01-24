@@ -5,7 +5,7 @@ import uvicorn
 import numpy as np
 import os
 import faiss
- 
+  
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Form
 from linebot import LineBotApi, WebhookHandler
 from linebot.models import (
@@ -156,6 +156,16 @@ def get_manual_response(user_message: str) -> str:
 # ฟังก์ชันสำหรับสร้าง Flex Message แบบกล่องเดียว
 def create_flex_message(text: str) -> FlexSendMessage:
     bubble = BubbleContainer(
+        header=BoxComponent(
+            layout='vertical',
+            contents=[
+                TextComponent(
+                    text="WildSafe",
+                    weight='bold',
+                    align='center'
+                )
+            ]
+        ),
         body=BoxComponent(
             layout='vertical',
             contents=[
@@ -164,14 +174,37 @@ def create_flex_message(text: str) -> FlexSendMessage:
                     wrap=True
                 )
             ]
+        ),
+        footer=BoxComponent(
+            layout='horizontal',
+            contents=[
+                ButtonComponent(
+                    style='primary',
+                    action=URIAction(
+                        type='uri',
+                        label='GO MAP',
+                        uri='https://aprlabtop.com/Honey_test/chang_v3.php'
+                    )
+                )
+            ]
         )
     )
-    return FlexSendMessage(alt_text="Flex Message", contents=bubble)
+    return FlexSendMessage(alt_text="WildSafe Message", contents=bubble)
 
-# ฟังก์ชันสำหรับสร้าง Carousel Flex Message
+# ฟังก์ชันสำหรับสร้าง Carousel Message
 def create_carousel_message() -> FlexSendMessage:
     # บับเบิลแรก
     bubble1 = BubbleContainer(
+        header=BoxComponent(
+            layout='vertical',
+            contents=[
+                TextComponent(
+                    text="WildSafe",
+                    weight='bold',
+                    align='center'
+                )
+            ]
+        ),
         body=BoxComponent(
             layout='horizontal',
             contents=[
@@ -188,8 +221,8 @@ def create_carousel_message() -> FlexSendMessage:
                     style='primary',
                     action=URIAction(
                         type='uri',
-                        label='Go',
-                        uri='https://example.com'
+                        label='GO MAP',
+                        uri='https://aprlabtop.com/Honey_test/chang_v3.php'
                     )
                 )
             ]
@@ -198,6 +231,16 @@ def create_carousel_message() -> FlexSendMessage:
 
     # บับเบิลที่สอง
     bubble2 = BubbleContainer(
+        header=BoxComponent(
+            layout='vertical',
+            contents=[
+                TextComponent(
+                    text="WildSafe",
+                    weight='bold',
+                    align='center'
+                )
+            ]
+        ),
         body=BoxComponent(
             layout='horizontal',
             contents=[
@@ -214,20 +257,16 @@ def create_carousel_message() -> FlexSendMessage:
                     style='primary',
                     action=URIAction(
                         type='uri',
-                        label='Go',
-                        uri='https://example.com'
+                        label='GO MAP',
+                        uri='https://aprlabtop.com/Honey_test/chang_v3.php'
                     )
                 )
             ]
         )
     )
 
-    # สร้าง Carousel Container
-    carousel = CarouselContainer(
-        contents=[bubble1, bubble2]
-    )
-
-    return FlexSendMessage(alt_text="Carousel Message", contents=carousel)
+    carousel = CarouselContainer(contents=[bubble1, bubble2])
+    return FlexSendMessage(alt_text="WildSafe Carousel", contents=carousel)
 
 @app.post('/message')
 async def message(request: Request):
@@ -257,6 +296,16 @@ def handle_message(event: MessageEvent):
                 for doc in retrieved_docs:
                     text = "ดูข้อมูลเพิ่มเติมที่นี่" if "http" in doc else doc
                     bubble = BubbleContainer(
+                        header=BoxComponent(
+                            layout='vertical',
+                            contents=[
+                                TextComponent(
+                                    text="WildSafe",
+                                    weight='bold',
+                                    align='center'
+                                )
+                            ]
+                        ),
                         body=BoxComponent(
                             layout='horizontal',
                             contents=[
@@ -273,18 +322,18 @@ def handle_message(event: MessageEvent):
                                     style='primary',
                                     action=URIAction(
                                         type='uri',
-                                        label='Go',
-                                        uri='https://example.com'
+                                        label='GO MAP',
+                                        uri='https://aprlabtop.com/Honey_test/chang_v3.php'
                                     )
                                 )
-            ]
+                            ]
                         )
                     )
                     bubbles.append(bubble)
                 
                 carousel = CarouselContainer(contents=bubbles)
                 reply = FlexSendMessage(
-                    alt_text="Carousel Message",
+                    alt_text="WildSafe Carousel",
                     contents=carousel
                 )
             else:
@@ -316,7 +365,6 @@ def handle_message(event: MessageEvent):
             event.reply_token,
             [reply]
         )
-
 @app.get('/test-message')
 async def test_message_rag(text: str):
     """
