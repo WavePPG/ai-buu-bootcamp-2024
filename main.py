@@ -5,7 +5,9 @@ import uvicorn
 import numpy as np
 import os
 import faiss
-  
+from dotenv import load_dotenv
+import logging
+
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Form
 from linebot import LineBotApi, WebhookHandler
 from linebot.models import (
@@ -18,18 +20,27 @@ from linebot.models import (
     TextComponent,
     ButtonComponent,
     URIAction,
+    CarouselContainer,  # เพิ่มการนำเข้า CarouselContainer
 )
 from linebot.exceptions import InvalidSignatureError
 from sentence_transformers import SentenceTransformer
 from typing import Dict
 from contextlib import asynccontextmanager
 
+# โหลดตัวแปรสิ่งแวดล้อมจากไฟล์ .env
+load_dotenv()
+
+# กำหนดค่า logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 app = FastAPI()
 
 # ข้อมูล token และ channel secret สำหรับ LINE
-ACCESS_TOKEN = os.getenv("LINE_ACCESS_TOKEN", "RMuXBCLD7tGSbkGgdELH7Vz9+Qz0YhqCIeKBhpMdKvOVii7W2L9rNpAHjYGigFN4ORLknMxhuWJYKIX3uLrY1BUg7E3Bk0v3Fmc5ZIC53d8fOdvIMyZQ6EdaOS0a6kejeqcX/dRFI/JfiFJr5mdwZgdB04t89/1O/w1cDnyilFU=")
-CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET", "175149695b4d312eabb9df4b7e3e7a95")
-Gemini_API_Key = "AIzaSyBfkFZ8DCBb57CwW8WIwqSbUTB3fyIfw6g"
+ACCESS_TOKEN = os.getenv("LINE_ACCESS_TOKEN")
+CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET")
+Gemini_API_Key = os.getenv("GEMINI_API_KEY")
+Gemini_Endpoint_URL = os.getenv("GEMINI_ENDPOINT_URL")
 
 line_bot_api = LineBotApi(ACCESS_TOKEN)
 handler = WebhookHandler(CHANNEL_SECRET)
@@ -150,16 +161,29 @@ def get_manual_response(user_message: str) -> str:
     else:
         return None
 
-def get_gemini_response(query: str, api_key: str):
-    # ตัวอย่างการส่งคำถามไปยัง Gemini API
-    url = "https://example.com/gemini-endpoint"  # ใช้ URL จริงที่ Gemini API ให้
-    headers = {"Authorization": f"Bearer {api_key}"}
+def get_gemini_response(query: str, api_key: str, endpoint_url: str):
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
     data = {"query": query}
-    response = requests.post(url, headers=headers, json=data)
     
-    if response.status_code == 200:
-        return response.json().get("response", "ขอโทษค่ะ ฉันไม่สามารถช่วยได้ในขณะนี้")
-    else:
+    try:
+        response = requests.post(endpoint_url, headers=headers, json=data, timeout=10)
+        response.raise_for_status()  # ยกข้อผิดพลาดถ้ามีสถานะไม่ใช่ 200
+        response_data = response.json()
+        return response_data.get("response", "ขอโทษค่ะ ฉันไม่สามารถช่วยได้ในขณะนี้")
+    except requests.exceptions.HTTPError as http_err:
+        logger.error(f"HTTP error occurred: {http_err} - Response: {response.text}")
+        return f"HTTP error occurred: {http_err}"
+    except requests.exceptions.ConnectionError as conn_err:
+        logger.error(f"Connection error occurred: {conn_err}")
+        return "เกิดข้อผิดพลาดในการเชื่อมต่อกับ Gemini"
+    except requests.exceptions.Timeout as timeout_err:
+        logger.error(f"Timeout error occurred: {timeout_err}")
+        return "การเชื่อมต่อกับ Gemini ใช้เวลานานเกินไป"
+    except requests.exceptions.RequestException as req_err:
+        logger.error(f"Request exception occurred: {req_err}")
         return "เกิดข้อผิดพลาดในการเชื่อมต่อกับ Gemini"
 
 def create_bubble_container(text: str) -> BubbleContainer:
@@ -223,7 +247,7 @@ def handle_message(event: MessageEvent):
         manual_response = get_manual_response(user_message)
         
         if not manual_response:
-            manual_response = get_gemini_response(user_message, Gemini_API_Key)
+            manual_response = get_gemini_response(user_message, Gemini_API_Key, Gemini_Endpoint_URL)
         
         reply = create_flex_message(manual_response)
         line_bot_api.reply_message(event.reply_token, [reply])
