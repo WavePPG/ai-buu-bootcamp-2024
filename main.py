@@ -169,15 +169,15 @@ def create_bubble_container(text: str) -> BubbleContainer:
             paddingTop='8px',
             contents=[
                 ButtonComponent(
-                    style='link',
+                    style='primary',  # เปลี่ยนจาก 'link' เป็น 'primary'
                     height='sm',
                     adjustMode='shrink-to-fit',
                     action=URIAction(
                         label='GO MAP',
                         uri='https://aprlabtop.com/Honey_test/chang_v3.php'
                     ),
-                    color='#FFFFFF',
-                    backgroundColor='#27AE60'
+                    color='#FFFFFF',          # สีข้อความ
+                    backgroundColor='#27AE60' # สีพื้นหลัง (เขียว)
                 )
             ]
         ),
@@ -230,7 +230,7 @@ def handle_message(event: MessageEvent):
 • เลือกหัวข้อที่ต้องการความช่วยเหลือ
 • กด GO MAP เพื่อดูแผนที่"""
                 reply = create_flex_message(error_message)
-
+        
         line_bot_api.reply_message(
             event.reply_token,
             [reply]
