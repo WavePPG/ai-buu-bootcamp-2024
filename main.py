@@ -14,7 +14,6 @@ from linebot.models import (
     ImageMessage,
     FlexSendMessage,
     BubbleContainer,
-    CarouselContainer,
     BoxComponent,
     TextComponent,
     ButtonComponent,
@@ -27,8 +26,10 @@ from contextlib import asynccontextmanager
 
 app = FastAPI()
 
+# ข้อมูล token และ channel secret สำหรับ LINE
 ACCESS_TOKEN = os.getenv("LINE_ACCESS_TOKEN", "RMuXBCLD7tGSbkGgdELH7Vz9+Qz0YhqCIeKBhpMdKvOVii7W2L9rNpAHjYGigFN4ORLknMxhuWJYKIX3uLrY1BUg7E3Bk0v3Fmc5ZIC53d8fOdvIMyZQ6EdaOS0a6kejeqcX/dRFI/JfiFJr5mdwZgdB04t89/1O/w1cDnyilFU=")
 CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET", "175149695b4d312eabb9df4b7e3e7a95")
+Gemini_API_Key = "AIzaSyBfkFZ8DCBb57CwW8WIwqSbUTB3fyIfw6g"
 
 line_bot_api = LineBotApi(ACCESS_TOKEN)
 handler = WebhookHandler(CHANNEL_SECRET)
@@ -86,31 +87,54 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+# ข้อความคู่มือต่างๆ - เวอร์ชันปรับปรุง
 EMERGENCY_MANUAL = """
-คู่มือการใช้งานฟีเจอร์ "Emergency"
-**ฟังก์ชันหลัก:**
-- **คำแนะนำในกรณีฉุกเฉิน**: กดปุ่ม "Emergency" เพื่อรับคำแนะนำในสถานการณ์ฉุกเฉินต่างๆ
-- **ถามตอบกับบอท**: พิมพ์คำถามเกี่ยวกับสถานการณ์ฉุกเฉิน เช่น "ช้างเหยียบรถควรทำยังไง" เพื่อรับคำตอบทันที
+📱 คู่มือการใช้งาน WildSafe 🦮
+
+🔸 วิธีใช้งานฉุกเฉิน
+   • กดปุ่ม "Emergency" ทันทีเมื่อต้องการความช่วยเหลือ
+   • รับคำแนะนำที่เป็นประโยชน์สำหรับสถานการณ์ฉุกเฉิน
+
+🔸 สอบถามข้อมูลด่วน
+   • พิมพ์คำถามที่ต้องการความช่วยเหลือ
+   • เช่น "พบช้างบนถนนต้องทำอย่างไร?"
+   • รับคำตอบและวิธีแก้ไขสถานการณ์ทันที
 """
 
 WATCH_ELEPHANT_MANUAL = """
-เมื่อช้างเข้าใกล้ในสถานการณ์ฉุกเฉิน ควรทำตามขั้นตอนดังนี้:
-1. รักษาความสงบ: หลีกเลี่ยงการแสดงอาการตกใจหรือกลัว
-2. หลีกเลี่ยงการสบตา: ไม่มองตาช้างโดยตรง
-3. ค่อยๆ ถอยหลังออก: เคลื่อนไหวอย่างช้าๆ เพื่อสร้างระยะห่าง
-4. หาที่หลบภัย: เข้าไปในที่มีอุปสรรค เช่น ต้นไม้ใหญ่หรือกำแพง
-5. ติดต่อเจ้าหน้าที่: โทรขอความช่วยเหลือทันที โทร **086-092-6529** เป็นหมายเลขโทรศัพท์ของ **ศูนย์บริการนักท่องเที่ยว**
+🐘 แนวทางปฏิบัติเมื่อพบช้างในระยะใกล้ 🚨
+
+1. 😌 รักษาสติ - ควบคุมอารมณ์ให้สงบ ไม่ตื่นตระหนก
+
+2. 👀 หลีกเลี่ยงการสบตา - อย่าจ้องมองช้างโดยตรง
+
+3. 🚶‍♂️ ถอยออกอย่างช้าๆ - เคลื่อนที่เงียบๆ สร้างระยะห่างที่ปลอดภัย
+
+4. 🌳 หาที่กำบัง - มองหาต้นไม้ใหญ่หรือสิ่งกีดขวางที่แข็งแรง
+
+5. ☎️ แจ้งเจ้าหน้าที่ทันที
+   📞 โทร: 086-092-6529 (ศูนย์บริการนักท่องเที่ยว 24 ชม.)
 """
 
 CHECK_ELEPHANT_MANUAL = """
-ตรวจช้างก่อนเดินทาง!** เช็คความปลอดภัยก่อนออกเดินทางที่นี่ 👉 [คลิกเลย](https://aprlabtop.com/Honey_test/chang_v3.php)
+🔍 ตรวจสอบเส้นทางก่อนเดินทาง!
+
+🐘 เช็คพื้นที่พบช้างป่าล่าสุด
+👉 คลิกเพื่อดูแผนที่: https://aprlabtop.com/Honey_test/chang_v3.php
+
+⚠️ เพื่อความปลอดภัยของคุณและช้างป่า
 """
 
 OFFICER_MANUAL = """
-**ติดต่อเจ้าหน้าที่**
-- **หมายเลขหลัก**: 1669 (บริการฉุกเฉิน 24 ชั่วโมง)
-- **ศูนย์บริการนักท่องเที่ยว**: โทร 086-092-6529
-- **ที่ทำการอุทยานแห่งชาติเขาใหญ่**: โทร 086-092-6527
+📞 ติดต่อขอความช่วยเหลือ 🆘
+
+🚑 เหตุฉุกเฉิน 24 ชม.: 1669
+
+🏕️ ติดต่อเจ้าหน้าที่พื้นที่:
+• ศูนย์บริการนักท่องเที่ยว: 086-092-6529
+• อุทยานแห่งชาติเขาใหญ่: 086-092-6527
+
+⏰ พร้อมให้บริการตลอด 24 ชั่วโมง
 """
 
 def get_manual_response(user_message: str) -> str:
@@ -125,89 +149,51 @@ def get_manual_response(user_message: str) -> str:
         return OFFICER_MANUAL
     else:
         return None
+
+def get_gemini_response(query: str, api_key: str):
+    # ตัวอย่างการส่งคำถามไปยัง Gemini API
+    url = "https://example.com/gemini-endpoint"  # ใช้ URL จริงที่ Gemini API ให้
+    headers = {"Authorization": f"Bearer {api_key}"}
+    data = {"query": query}
+    response = requests.post(url, headers=headers, json=data)
+    
+    if response.status_code == 200:
+        return response.json().get("response", "ขอโทษค่ะ ฉันไม่สามารถช่วยได้ในขณะนี้")
+    else:
+        return "เกิดข้อผิดพลาดในการเชื่อมต่อกับ Gemini"
+
 def create_bubble_container(text: str) -> BubbleContainer:
     return BubbleContainer(
         header=BoxComponent(
             layout='vertical',
-            contents=[
-                TextComponent(
-                    text="WildSafe",
-                    weight='bold',
-                    align='center',
-                    color='#FFFFFF',
-                    size='xl'
-                )
-            ],
+            contents=[TextComponent(
+                text="WildSafe",
+                weight='bold',
+                align='center',
+                color='#FFFFFF',
+                size='xl'
+            )],
             background_color='#27AE60'
         ),
         body=BoxComponent(
             layout='vertical',
-            contents=[
-                TextComponent(
-                    text=text,
-                    wrap=True,
-                    size='sm'
-                )
-            ]
+            contents=[TextComponent(
+                text=text,
+                wrap=True,
+                size='sm'
+            )]
         ),
         footer=BoxComponent(
             layout='vertical',
-            contents=[
-                ButtonComponent(
-                    style='primary',
-                    action=URIAction(
-                        label='GO MAP',
-                        uri='https://aprlabtop.com/Honey_test/chang_v3.php'
-                    )
+            contents=[ButtonComponent(
+                style='primary',
+                action=URIAction(
+                    label='GO MAP',
+                    uri='https://aprlabtop.com/Honey_test/chang_v3.php'
                 )
-            ]
+            )]
         )
     )
-
-
-def create_flex_message(text: str) -> FlexSendMessage:
-    bubble = BubbleContainer(
-        header=BoxComponent(
-            layout='vertical',
-            background_color='#27AE60',
-            contents=[
-                TextComponent(
-                    text="WildSafe",
-                    weight='bold',
-                    align='center',
-                    color='#FFFFFF',
-                    size='xl'
-                )
-            ]
-        ),
-        body=BoxComponent(
-            layout='vertical',
-            contents=[
-                TextComponent(
-                    text=text,
-                    wrap=True,
-                    size='sm'
-                )
-            ]
-        ),
-        footer=BoxComponent(
-            layout='vertical',
-            contents=[
-                ButtonComponent(
-                    style='primary',
-                    action=URIAction(
-                        label='GO MAP',
-                        uri='https://aprlabtop.com/Honey_test/chang_v3.php'
-                    )
-                )
-            ]
-        ),
-        styles={
-            "header": {"backgroundColor": "#27AE60"}
-        }
-    )
-    return FlexSendMessage(alt_text="WildSafe Message", contents=bubble)
-
 
 def create_flex_message(text: str) -> FlexSendMessage:
     bubble = create_bubble_container(text)
@@ -236,21 +222,11 @@ def handle_message(event: MessageEvent):
         user_message = event.message.text
         manual_response = get_manual_response(user_message)
         
-        if manual_response:
-            reply = create_flex_message(manual_response)
-        else:
-            retrieved_docs = rag.retrieve_documents(user_message, top_k=3)
-            
-            if retrieved_docs:
-                texts = ["ดูข้อมูลเพิ่มเติมที่นี่" if "http" in doc else doc for doc in retrieved_docs]
-                reply = create_carousel_message(texts)
-            else:
-                reply = create_flex_message("ขออภัย ฉันไม่เข้าใจคำถามของคุณ กรุณาลองใหม่อีกครั้ง")
-
-        line_bot_api.reply_message(
-            event.reply_token,
-            [reply]
-        )
+        if not manual_response:
+            manual_response = get_gemini_response(user_message, Gemini_API_Key)
+        
+        reply = create_flex_message(manual_response)
+        line_bot_api.reply_message(event.reply_token, [reply])
 
     elif isinstance(event.message, ImageMessage):
         try:
