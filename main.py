@@ -188,15 +188,24 @@ def create_bubble_container(text: str) -> dict:
     }
 
 def create_flex_message(text: str) -> dict:
-    # Ensure text is not None and convert to string
+    # ทำให้แน่ใจว่า text ไม่เป็น None และแปลงเป็น string
     safe_text = str(text) if text is not None else "ไม่มีข้อความ"
     
     bubble = create_bubble_container(safe_text)
+    
+    # ทำให้แน่ใจว่า altText ไม่เป็นค่าว่าง
+    alt_text = "WildSafe: " + (safe_text[:50] + "...") if safe_text.strip() else "WildSafe: ไม่มีข้อความ"
+    
+    # ทำให้แน่ใจว่า contents มีค่าที่ถูกต้อง
+    if not isinstance(bubble, dict) or 'contents' not in bubble:
+        bubble = create_bubble_container("ขออภัย เกิดข้อผิดพลาดในการประมวลผล กรุณาลองใหม่อีกครั้ง")
+    
     return {
         "type": "flex",
-        "altText": "WildSafe: " + safe_text[:50] + "...",  # Create a summary for altText
+        "altText": alt_text,
         "contents": bubble
     }
+
 
 def create_carousel_message(texts: list) -> dict:
     # Ensure each text is valid
