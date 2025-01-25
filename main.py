@@ -195,8 +195,8 @@ def handle_message(event: MessageEvent):
         if manual_response:
             reply = create_flex_message(manual_response)
         else:
-            # Check if the message is relevant to RAG
-            relevant_to_rag = any(keyword in user_message.lower() for keyword in ['emergency', 'ฉุกเฉิน', 'ช้าง', 'เจ้าหน้าที่'])
+            # Check if the message matches predefined keywords exactly
+            relevant_to_rag = any(user_message.strip().lower() == phrase for phrase in ['ฉุกเฉิน', 'ช้าง', 'เจ้าหน้าที่'])
             
             if relevant_to_rag:
                 retrieved_docs = rag.retrieve_documents(user_message, top_k=3)
@@ -208,14 +208,9 @@ def handle_message(event: MessageEvent):
                     gemini_response = model.generate_content(user_message)
                     reply = create_flex_message(gemini_response.text)
             else:
-                # Use Gemini for non-RAG queries
+                # Use Gemini for non-matching queries
                 gemini_response = model.generate_content(user_message)
                 reply = create_flex_message(gemini_response.text)
-                try:
-                    gemini_response = model.generate_content(user_message)
-                    reply = create_flex_message(gemini_response.text)
-                except Exception as e:
-                    reply = create_flex_message("ขออภัย เกิดข้อผิดพลาดในการประมวลผล กรุณาลองใหม่อีกครั้ง")
 
         line_bot_api.reply_message(
             event.reply_token,
@@ -248,3 +243,4 @@ def handle_message(event: MessageEvent):
 
 if __name__ == "__main__":
     uvicorn.run("main:app", port=8000, host="0.0.0.0")
+
