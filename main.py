@@ -198,12 +198,12 @@ def handle_message(event: MessageEvent):
                     reply = create_carousel_message(texts)
                 else:
                     # Use Gemini if RAG has no results
-                    gemini_response = model.generate_content(user_message + " ให้สรุปใจความสั้นๆกระชับเข้าใจง่าย")
-                    reply = create_flex_message(gemini_response.text)
+                    gemini_response = model.generate_content(user_message + " ให้สรุปสั้นๆใน 2-3 บรรทัด")
+                    reply = create_flex_message(gemini_response.text.strip().split("\n")[:3])
             else:
                 # Use Gemini for non-matching queries
-                gemini_response = model.generate_content(user_message + " ให้สรุปใจความสั้นๆกระชับเข้าใจง่าย")
-                reply = create_flex_message(gemini_response.text)
+                gemini_response = model.generate_content(user_message + " ให้สรุปสั้นๆใน 2-3 บรรทัด")
+                reply = create_flex_message("\n".join(gemini_response.text.strip().split("\n")[:3]))
 
         line_bot_api.reply_message(
             event.reply_token,
@@ -223,8 +223,8 @@ def handle_message(event: MessageEvent):
                 message = "ขอโทษครับ ภาพมีขนาดใหญ่เกินไป กรุณาลดขนาดภาพและลองใหม่อีกครั้ง"
             else:
                 try:
-                    gemini_response = model.generate_content("อธิบายรูปภาพนี้ ให้สรุปใจความสั้นๆกระชับเข้าใจง่าย")
-                    message = gemini_response.text
+                    gemini_response = model.generate_content("อธิบายรูปภาพนี้ ให้สรุปสั้นๆใน 2-3 บรรทัด")
+                    message = "\n".join(gemini_response.text.strip().split("\n")[:3])
                 except Exception:
                     message = "ขณะนี้ระบบไม่สามารถประมวลผลรูปภาพได้ กรุณาสอบถามด้วยข้อความแทนค่ะ 🙏🏻"
                 
@@ -233,6 +233,7 @@ def handle_message(event: MessageEvent):
             
         reply = create_flex_message(message)
         line_bot_api.reply_message(event.reply_token, [reply])
+
 
 
 if __name__ == "__main__":
