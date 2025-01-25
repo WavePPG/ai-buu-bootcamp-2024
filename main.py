@@ -26,8 +26,8 @@ import google.generativeai as genai
 app = FastAPI()
 
 # LINE Messaging API credentials
-ACCESS_TOKEN = os.getenv("LINE_ACCESS_TOKEN", "swniqM2ufZYtkLpiK5DJDvfw4ALzb4Fwf2hayI7mEuOP4GMKpMW5yhyJz9LzT6TKcZDAAXhs8DhKaGpyw8R6tgx2bhOlqfFSjmn2+KAX2+CNZRtWAMBqfSrLdRLxwauYcPwmmWVz5zw1NN1ejyFnWgdB04t89/1O/w1cDnyilFU=")
-CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET", "df84a355cf9b2257b4b6793b789ffac2")
+ACCESS_TOKEN = os.getenv("LINE_ACCESS_TOKEN", "RMuXBCLD7tGSbkGgdELH7Vz9+Qz0YhqCIeKBhpMdKvOVii7W2L9rNpAHjYGigFN4ORLknMxhuWJYKIX3uLrY1BUg7E3Bk0v3Fmc5ZIC53d8fOdvIMyZQ6EdaOS0a6kejeqcX/dRFI/JfiFJr5mdwZgdB04t89/1O/w1cDnyilFU=")
+CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET", "175149695b4d312eabb9df4b7e3e7a95")
 
 # Gemini API key
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AIzaSyBfkFZ8DCBb57CwW8WIwqSbUTB3fyIfw6g")
