@@ -84,7 +84,6 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-# Your manual content here
 EMERGENCY_MANUAL = """
 คู่มือการใช้งานฟีเจอร์ "Emergency"
 **ฟังก์ชันหลัก:**
@@ -111,6 +110,8 @@ OFFICER_MANUAL = """
 - **ศูนย์บริการนักท่องเที่ยว**: โทร 086-092-6529
 - **ที่ทำการอุทยานแห่งชาติเขาใหญ่**: โทร 086-092-6527
 """
+
+
 def get_manual_response(user_message: str) -> str:
     user_message = user_message.strip().lower()
     manuals = {
@@ -202,10 +203,14 @@ def handle_message(event: MessageEvent):
                 if retrieved_docs:
                     texts = ["ดูข้อมูลเพิ่มเติมที่นี่" if "http" in doc else doc for doc in retrieved_docs]
                     reply = create_carousel_message(texts)
-                    line_bot_api.reply_message(event.reply_token, [reply])
-                    return
-
-            # If not relevant to RAG or no RAG results, use Gemini
+                else:
+                    # Use Gemini if RAG has no results
+                    gemini_response = model.generate_content(user_message)
+                    reply = create_flex_message(gemini_response.text)
+            else:
+                # Use Gemini for non-RAG queries
+                gemini_response = model.generate_content(user_message)
+                reply = create_flex_message(gemini_response.text)
                 try:
                     gemini_response = model.generate_content(user_message)
                     reply = create_flex_message(gemini_response.text)
