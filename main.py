@@ -18,9 +18,9 @@ from sentence_transformers import SentenceTransformer
 from typing import Dict
 from contextlib import asynccontextmanager
 
-ACCESS_TOKEN = os.getenv("LINE_ACCESS_TOKEN", "RMuXBCLD7tGSbkGgdELH7Vz9+Qz0YhqCIeKBhpMdKvOVii7W2L9rNpAHjYGigFN4ORLknMxhuWJYKIX3uLrY1BUg7E3Bk0v3Fmc5ZIC53d8fOdvIMyZQ6EdaOS0a6kejeqcX/dRFI/JfiFJr5mdwZgdB04t89/1O/w1cDnyilFU=")
-CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET", "175149695b4d312eabb9df4b7e3e7a95")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AIzaSyBfkFZ8DCBb57CwW8WIwqSbUTB3fyIfw6g")
+ACCESS_TOKEN = os.getenv("LINE_ACCESS_TOKEN", "FfVoDvJvHY3kYAqiA/Rgr32EBpgyDfssfV5aX5L+8Zry5vf1yyc9qRcqkRAru52gJzYQJlgd4jKZIFoMo/iQlLPRsz+S6NO12SrIYFn2UzCV/iOv7wIdJGnVVgNcn+rem7ej+0FGKOdzQX4/VYGZuwdB04t89/1O/w1cDnyilFU=")
+CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET", "99a40583e525a2daf0494e3198c45907")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AIzaSyAc_q2XhfyjjDzwiK3mDnQ9y4BIvfOJeGM")
 
 # Setup LINE API
 line_bot_api = LineBotApi(ACCESS_TOKEN)
