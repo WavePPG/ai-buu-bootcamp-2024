@@ -18,9 +18,9 @@ from sentence_transformers import SentenceTransformer
 from typing import Dict
 from contextlib import asynccontextmanager
 
-ACCESS_TOKEN = os.getenv("LINE_ACCESS_TOKEN", "FfVoDvJvHY3kYAqiA/Rgr32EBpgyDfssfV5aX5L+8Zry5vf1yyc9qRcqkRAru52gJzYQJlgd4jKZIFoMo/iQlLPRsz+S6NO12SrIYFn2UzCV/iOv7wIdJGnVVgNcn+rem7ej+0FGKOdzQX4/VYGZuwdB04t89/1O/w1cDnyilFU=")
-CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET", "99a40583e525a2daf0494e3198c45907")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AIzaSyAc_q2XhfyjjDzwiK3mDnQ9y4BIvfOJeGM")
+ACCESS_TOKEN = os.getenv("LINE_ACCESS_TOKEN", "RMuXBCLD7tGSbkGgdELH7Vz9+Qz0YhqCIeKBhpMdKvOVii7W2L9rNpAHjYGigFN4ORLknMxhuWJYKIX3uLrY1BUg7E3Bk0v3Fmc5ZIC53d8fOdvIMyZQ6EdaOS0a6kejeqcX/dRFI/JfiFJr5mdwZgdB04t89/1O/w1cDnyilFU=")
+CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET", "175149695b4d312eabb9df4b7e3e7a95")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AIzaSyBfkFZ8DCBb57CwW8WIwqSbUTB3fyIfw6g")
 
 # Setup LINE API
 line_bot_api = LineBotApi(ACCESS_TOKEN)
@@ -198,11 +198,11 @@ def handle_message(event: MessageEvent):
                     reply = create_carousel_message(texts)
                 else:
                     # Use Gemini if RAG has no results
-                    gemini_response = model.generate_content(user_message + " ให้สรุปสั้นๆใน 3-5 บรรทัด  โดยเกี่ยวกับสุขภาพ")
+                    gemini_response = model.generate_content(user_message + " ให้สรุปสั้นๆใน 2-3 บรรทัด")
                     reply = create_flex_message(gemini_response.text.strip().split("\n")[:3])
             else:
                 # Use Gemini for non-matching queries
-                gemini_response = model.generate_content(user_message + " ให้สรุปสั้นๆใน 3-5 บรรทัด  โดยเกี่ยวกับสุขภาพ")
+                gemini_response = model.generate_content(user_message + " ให้สรุปสั้นๆใน 2-3 บรรทัด")
                 reply = create_flex_message("\n".join(gemini_response.text.strip().split("\n")[:3]))
 
         line_bot_api.reply_message(
@@ -223,7 +223,7 @@ def handle_message(event: MessageEvent):
                 message = "ขอโทษครับ ภาพมีขนาดใหญ่เกินไป กรุณาลดขนาดภาพและลองใหม่อีกครั้ง"
             else:
                 try:
-                    gemini_response = model.generate_content("อธิบายรูปภาพนี้ ให้สรุปสั้นๆใน 3-5 บรรทัด")
+                    gemini_response = model.generate_content("อธิบายรูปภาพนี้ ให้สรุปสั้นๆใน 2-3 บรรทัด")
                     message = "\n".join(gemini_response.text.strip().split("\n")[:3])
                 except Exception:
                     message = "ขณะนี้ระบบไม่สามารถประมวลผลรูปภาพได้ กรุณาสอบถามด้วยข้อความแทนค่ะ 🙏🏻"
@@ -238,4 +238,3 @@ def handle_message(event: MessageEvent):
 
 if __name__ == "__main__":
     uvicorn.run("main:app", port=8000, host="0.0.0.0")
-
