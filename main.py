@@ -142,18 +142,6 @@ def create_bubble_container(text: str) -> BubbleContainer:
                     size='sm'
                 )
             ]
-        ),
-        footer=BoxComponent(
-            layout='vertical',
-            contents=[
-                ButtonComponent(
-                    style='primary',
-                    action=URIAction(
-                        label='GO MAP',
-                        uri='https://aprlabtop.com/Honey_test/chang_v23.php'
-                    )
-                )
-            ]
         )
     )
 
