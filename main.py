@@ -132,7 +132,7 @@ def create_bubble_container(text: str) -> BubbleContainer:
             layout='vertical',
             contents=[
                 TextComponent(
-                    text="WildSafe",
+                    text="HealthMate",
                     weight='bold',
                     align='center',
                     color='#FFFFFF',
