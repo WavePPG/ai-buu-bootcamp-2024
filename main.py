@@ -76,7 +76,7 @@ rag = RAGSystem()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Add your sample documents here
-    sample_documents = [EMERGENCY_MANUAL, WATCH_ELEPHANT_MANUAL, CHECK_ELEPHANT_MANUAL, OFFICER_MANUAL]
+    sample_documents = [EMERGENCY_MANUAL, FIRST_AID_MANUAL, HEALTH_CHECK_MANUAL, MEDICAL_CONTACTS]
     for doc in sample_documents:
         rag.add_document(doc)
     yield
@@ -132,7 +132,7 @@ def create_bubble_container(text: str) -> BubbleContainer:
             layout='vertical',
             contents=[
                 TextComponent(
-                    text="HealthMate",
+                    text="WildSafe",
                     weight='bold',
                     align='center',
                     color='#FFFFFF',
