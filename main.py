@@ -118,44 +118,6 @@ def get_manual_response(user_message: str) -> str:
     }
     return manuals.get(user_message)
 
-def create_bubble_container(text: str) -> BubbleContainer:
-    return BubbleContainer(
-        header=BoxComponent(
-            layout='vertical',
-            contents=[
-                TextComponent(
-                    text="WildSafe",
-                    weight='bold',
-                    align='center',
-                    color='#FFFFFF',
-                    size='xl'
-                )
-            ],
-            background_color='#27AE60'
-        ),
-        body=BoxComponent(
-            layout='vertical',
-            contents=[
-                TextComponent(
-                    text=text,
-                    wrap=True,
-                    size='sm'
-                )
-            ]
-        ),
-        footer=BoxComponent(
-            layout='vertical',
-            contents=[
-                ButtonComponent(
-                    style='primary',
-                    action=URIAction(
-                        label='GO MAP',
-                        uri='https://aprlabtop.com/Honey_test/chang_v23.php'
-                    )
-                )
-            ]
-        )
-    )
 
 def create_flex_message(text: str) -> FlexSendMessage:
     bubble = create_bubble_container(text)
