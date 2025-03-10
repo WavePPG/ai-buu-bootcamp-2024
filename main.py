@@ -6,7 +6,7 @@ import numpy as np
 import os
 import faiss
 import google.generativeai as genai
-from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, Request
 from linebot import LineBotApi, WebhookHandler
 from linebot.models import (
     MessageEvent, TextMessage, ImageMessage, FlexSendMessage,
@@ -15,8 +15,13 @@ from linebot.models import (
 )
 from linebot.exceptions import InvalidSignatureError
 from sentence_transformers import SentenceTransformer
-from typing import Dict
 from contextlib import asynccontextmanager
+
+# Define the missing manuals
+EMERGENCY_MANUAL = "Emergency manual content here."
+FIRST_AID_MANUAL = "First aid manual content here."
+HEALTH_CHECK_MANUAL = "Health check manual content here."
+MEDICAL_CONTACTS = "Medical contacts details here."
 
 ACCESS_TOKEN = os.getenv("LINE_ACCESS_TOKEN", "RMuXBCLD7tGSbkGgdELH7Vz9+Qz0YhqCIeKBhpMdKvOVii7W2L9rNpAHjYGigFN4ORLknMxhuWJYKIX3uLrY1BUg7E3Bk0v3Fmc5ZIC53d8fOdvIMyZQ6EdaOS0a6kejeqcX/dRFI/JfiFJr5mdwZgdB04t89/1O/w1cDnyilFU=")
 CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET", "175149695b4d312eabb9df4b7e3e7a95")
@@ -114,7 +119,6 @@ exercise = """ออกกำลังกาย
 4. HIIT (High-Intensity Interval Training): การออกกำลังกายแบบหนักสลับเบา ช่วยเผาผลาญไขมันได้เร็วขึ้น
 5. ออกกำลังกายกลางแจ้ง: เช่น วิ่งในสวน ขี่จักรยาน หรือเล่นกีฬากลางแจ้งเพื่อรับอากาศบริสุทธิ์
 """
-
 
 def get_manual_response(user_message: str) -> str:
     user_message = user_message.strip().lower()
@@ -216,21 +220,19 @@ def handle_message(event: MessageEvent):
             image = Image.open(image_data)
             
             if image.size[0] * image.size[1] > 1024 * 1024:
-                message = "ขอโทษครับ ภาพมีขนาดใหญ่เกินไป กรุณาลดขนาดภาพและลองใหม่อีกครั้ง"
+                message_text = "ขอโทษครับ ภาพมีขนาดใหญ่เกินไป กรุณาลดขนาดภาพและลองใหม่อีกครั้ง"
             else:
                 try:
                     gemini_response = model.generate_content("อธิบายรูปภาพนี้ ให้สรุปสั้นๆใน 2-3 บรรทัด")
-                    message = "\n".join(gemini_response.text.strip().split("\n")[:3])
+                    message_text = "\n".join(gemini_response.text.strip().split("\n")[:3])
                 except Exception:
-                    message = "ขณะนี้ระบบไม่สามารถประมวลผลรูปภาพได้ กรุณาสอบถามด้วยข้อความแทนค่ะ 🙏🏻"
+                    message_text = "ขณะนี้ระบบไม่สามารถประมวลผลรูปภาพได้ กรุณาสอบถามด้วยข้อความแทนค่ะ 🙏🏻"
                 
         except Exception:
-            message = "เกิดข้อผิดพลาด, กรุณาลองใหม่อีกครั้ง🙏🏻"
+            message_text = "เกิดข้อผิดพลาด, กรุณาลองใหม่อีกครั้ง🙏🏻"
             
-        reply = create_flex_message(message)
+        reply = create_flex_message(message_text)
         line_bot_api.reply_message(event.reply_token, [reply])
-
-
 
 if __name__ == "__main__":
     uvicorn.run("main:app", port=8000, host="0.0.0.0")
